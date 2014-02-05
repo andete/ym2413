@@ -105,7 +105,7 @@ override ASMFLAGS += -x assembler-with-cpp -D$(DEVICE) -Wall -Wextra -mcpu=corte
 # NOTE: The -Wl,--gc-sections flag may interfere with debugging using gdb.
 #
 override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
--mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/efm32gg.ld  \
+-mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld  \
 --specs=nano.specs -Wl,--gc-sections
 
 LIBS = -Wl,--start-group -lgcc -lc_s -lnosys   -Wl,--end-group
@@ -115,8 +115,8 @@ INCLUDEPATHS += \
 -I$(SILABS)/CMSIS/Include \
 -I$(SILABS)/Device/EnergyMicro/EFM32GG/Include \
 -I$(SILABS)/emlib/inc \
--I$(SILABS)/joost-efm32/common/drivers \
--I$(SILABS)/joost-efm32/common/bsp \
+-I$(SILABS)/common/drivers \
+-I$(SILABS)/common/bsp \
 -Iconfig \
 -I$(SILABS)/reptile/glib
 
@@ -126,7 +126,7 @@ INCLUDEPATHS += \
 
 C_SRC +=  \
 $(SILABS)/Device/EnergyMicro/EFM32GG/Source/system_efm32gg.c \
-$(SILABS)/joost-efm32/common/drivers/udelay.c \
+$(SILABS)/common/drivers/udelay.c \
 $(SILABS)/emlib/src/em_assert.c \
 $(SILABS)/emlib/src/em_cmu.c \
 $(SILABS)/emlib/src/em_emu.c \

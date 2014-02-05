@@ -92,20 +92,20 @@ DEPFLAGS = -MMD -MP -MF $(@:.o=.d)
 #
 # Add -Wa,-ahld=$(LST_DIR)/$(@F:.o=.lst) to CFLAGS to produce assembly list files
 #
-override CFLAGS += -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m0plus -mthumb \
+override CFLAGS += -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m3 -mthumb \
 -ffunction-sections -fdata-sections -fomit-frame-pointer \
 -DDEBUG_EFM  $(DEPFLAGS)
 
 CXFLAGS = -fno-exceptions -fno-rtti -std=gnu++11
 CFLAGSEXTRA = -std=gnu99
 
-override ASMFLAGS += -x assembler-with-cpp -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m0plus -mthumb
+override ASMFLAGS += -x assembler-with-cpp -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m3 -mthumb
 
 #
 # NOTE: The -Wl,--gc-sections flag may interfere with debugging using gdb.
 #
-override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m0plus \
--mthumb -T$(SILABS)/Device/EnergyMicro/EFM32ZG/Source/GCC/efm32zg.ld  \
+override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
+-mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/efm32gg.ld  \
 --specs=nano.specs -Wl,--gc-sections
 
 LIBS = -Wl,--start-group -lgcc -lc_s -lnosys   -Wl,--end-group
@@ -113,7 +113,7 @@ LIBS = -Wl,--start-group -lgcc -lc_s -lnosys   -Wl,--end-group
 INCLUDEPATHS += \
 -I. \
 -I$(SILABS)/CMSIS/Include \
--I$(SILABS)/Device/EnergyMicro/EFM32ZG/Include \
+-I$(SILABS)/Device/EnergyMicro/EFM32GG/Include \
 -I$(SILABS)/emlib/inc \
 -I$(SILABS)/joost-efm32/common/drivers \
 -I$(SILABS)/joost-efm32/common/bsp \

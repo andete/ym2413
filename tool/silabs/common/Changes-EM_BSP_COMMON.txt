@@ -1,0 +1,16 @@
+================ Revision history ============================================
+3.20.2:
+- Added DISPLAY device driver, and specifically support for the Sharp Memory
+  LCD (model LS013B7DH03) on the EFM32ZG_STK3200.
+- Fixed bug in SWO setup.
+
+3.20.0:
+- Fixed bug in microsd driver.
+- Fixed bug in segmentlcd driver.
+- New functions SegmentLCD_LowerHex() and SegmentLCD_LowerNumber()in
+  segmentlcd driver.
+- Added MCU plugin board and board controller communication (BCC) API.
+- New function BSP_BusControlModeGet().
+
+1.0.0:
+- First release

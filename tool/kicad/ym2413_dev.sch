@@ -1422,9 +1422,9 @@ F 3 "" H 3500 6750 60  0000 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	3450 6650 3700 6650
+	3450 6650 4050 6650
 Wire Wire Line
-	3700 6750 3550 6750
+	3550 6750 3950 6750
 Text Label 3150 6650 0    60   ~ 0
 D-B
 Text Label 3150 6750 0    60   ~ 0
@@ -1506,4 +1506,10 @@ Wire Wire Line
 Wire Wire Line
 	3850 2900 3850 3100
 Connection ~ 3850 2900
+NoConn ~ 4150 5600
+NoConn ~ 3850 5600
+Wire Wire Line
+	4050 6650 4050 5600
+Wire Wire Line
+	3950 6750 3950 5600
 $EndSCHEMATC

@@ -539,11 +539,15 @@
 		</item>
 		<item class_id_reference="2" object_id="_31">
 			<uniqueModuleId>EFM32GG332F1024@TIMER0</uniqueModuleId>
-			<enabled>0</enabled>
+			<enabled>1</enabled>
 			<locationValue>0</locationValue>
 			<signalsWithEnableInvertedFromDefault>
-				<count>0</count>
+				<count>4</count>
 				<item_version>0</item_version>
+				<item>CC2</item>
+				<item>CDTI0</item>
+				<item>CDTI1</item>
+				<item>CDTI2</item>
 			</signalsWithEnableInvertedFromDefault>
 			<customKeyValueStore>
 				<count>0</count>
@@ -595,11 +599,14 @@
 		</item>
 		<item class_id_reference="2" object_id="_35">
 			<uniqueModuleId>EFM32GG332F1024@USART0</uniqueModuleId>
-			<enabled>0</enabled>
+			<enabled>1</enabled>
 			<locationValue>0</locationValue>
 			<signalsWithEnableInvertedFromDefault>
-				<count>0</count>
+				<count>3</count>
 				<item_version>0</item_version>
+				<item>CLK</item>
+				<item>CS</item>
+				<item>TX</item>
 			</signalsWithEnableInvertedFromDefault>
 			<customKeyValueStore>
 				<count>12</count>
@@ -610,7 +617,7 @@
 				</item>
 				<item>
 					<first>baudrate</first>
-					<second></second>
+					<second>31250</second>
 				</item>
 				<item>
 					<first>clockMode</first>

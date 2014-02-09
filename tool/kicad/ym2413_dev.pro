@@ -1,6 +1,6 @@
-update=Sun 09 Feb 2014 04:28:29 PM CET
+update=Sun 09 Feb 2014 07:54:43 PM CET
 version=1
-last_client=kicad
+last_client=pcbnew
 [cvpcb]
 version=1
 NetIExt=net
@@ -49,11 +49,13 @@ LibName28=opto
 LibName29=atmel
 LibName30=contrib
 LibName31=valves
+[general]
+version=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=
 LastNetListRead=ym2413_dev.net
-UseCmpFile=0
+UseCmpFile=1
 PadDrill=0.6
 PadDrillOvalY=0.6
 PadSizeH=1.5
@@ -88,5 +90,3 @@ LibName14=led
 LibName15=dip_sockets
 LibName16=pga_sockets
 LibName17=valves
-[general]
-version=1

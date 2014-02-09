@@ -2023,4 +2023,21 @@ Wire Wire Line
 	5250 7450 5250 7550
 Text Notes 3800 7000 0    60   ~ 0
 TODO: use other optocoupler?
+$Comp
+L D D?
+U 1 1 52F758D1
+P 4400 7300
+F 0 "D?" V 4350 7400 60  0000 C CNN
+F 1 "D" H 4405 7235 60  0001 C CNN
+F 2 "" H 4400 7300 60  0000 C CNN
+F 3 "" H 4400 7300 60  0000 C CNN
+	1    4400 7300
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	4400 7200 4400 7250
+Connection ~ 4400 7200
+Wire Wire Line
+	4400 7350 4400 7400
+Connection ~ 4400 7400
 $EndSCHEMATC

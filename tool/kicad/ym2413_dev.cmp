@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Mon 10 Feb 2014 07:47:10 AM CET
+Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Mon 10 Feb 2014 11:01:42 AM CET
 
 BeginCmp
 TimeStamp = /52F426B6;
@@ -578,7 +578,7 @@ BeginCmp
 TimeStamp = /52F86C85;
 Reference = P35;
 ValeurCmp = CONN_6;
-IdModule  = PIN_1X4_S;
+IdModule  = PIN_1X6_S;
 EndCmp
 
 BeginCmp
@@ -586,6 +586,20 @@ TimeStamp = /52F868F0;
 Reference = P36;
 ValeurCmp = CONN_5;
 IdModule  = PIN_1X5_S;
+EndCmp
+
+BeginCmp
+TimeStamp = /52F8B72C;
+Reference = P37;
+ValeurCmp = TEST_POINT;
+IdModule  = Test_Pad_1mm;
+EndCmp
+
+BeginCmp
+TimeStamp = /52F8B732;
+Reference = P38;
+ValeurCmp = TEST_POINT;
+IdModule  = Test_Pad_1mm;
 EndCmp
 
 BeginCmp
@@ -785,20 +799,6 @@ IdModule  = 0603_S;
 EndCmp
 
 BeginCmp
-TimeStamp = /52E3BF37;
-Reference = R29;
-ValeurCmp = 22;
-IdModule  = 0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3BFF9;
-Reference = R30;
-ValeurCmp = 22;
-IdModule  = 0603_S;
-EndCmp
-
-BeginCmp
 TimeStamp = /52E3A3F5;
 Reference = R31;
 ValeurCmp = 100k;
@@ -808,13 +808,6 @@ EndCmp
 BeginCmp
 TimeStamp = /52E3BD6F;
 Reference = R32;
-ValeurCmp = 22;
-IdModule  = 0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3BFF3;
-Reference = R33;
 ValeurCmp = 22;
 IdModule  = 0603_S;
 EndCmp
@@ -1019,7 +1012,7 @@ BeginCmp
 TimeStamp = /52F748ED;
 Reference = U6;
 ValeurCmp = LM386;
-IdModule  = HRS-U.FL-R-SMT;
+IdModule  = R-PDSO-G8;
 EndCmp
 
 BeginCmp

@@ -493,51 +493,6 @@ XIN
 Text Label 7250 2500 0    60   ~ 0
 XOUT
 $Comp
-L R R29
-U 1 1 52E3BF37
-P 6900 2600
-F 0 "R29" H 6900 2650 40  0000 C CNN
-F 1 "22" H 6900 2550 40  0000 C CNN
-F 2 "" H 6900 2600 60  0000 C CNN
-F 3 "" H 6900 2600 60  0000 C CNN
-	1    6900 2600
-	-1   0    0    1   
-$EndComp
-$Comp
-L R R33
-U 1 1 52E3BFF3
-P 7050 2700
-F 0 "R33" H 7050 2750 40  0000 C CNN
-F 1 "22" H 7050 2650 40  0000 C CNN
-F 2 "" H 7050 2700 60  0000 C CNN
-F 3 "" H 7050 2700 60  0000 C CNN
-	1    7050 2700
-	-1   0    0    1   
-$EndComp
-$Comp
-L R R30
-U 1 1 52E3BFF9
-P 6900 2800
-F 0 "R30" H 6900 2850 40  0000 C CNN
-F 1 "22" H 6900 2750 40  0000 C CNN
-F 2 "" H 6900 2800 60  0000 C CNN
-F 3 "" H 6900 2800 60  0000 C CNN
-	1    6900 2800
-	-1   0    0    1   
-$EndComp
-Text Label 7250 2600 0    60   ~ 0
-~IC
-Text Label 7250 2700 0    60   ~ 0
-~CS
-Text Label 7250 2800 0    60   ~ 0
-~WE
-Text Label 6700 2800 0    60   ~ 0
-~WE'
-Text Label 6700 2700 0    60   ~ 0
-~CS'
-Text Label 6700 2600 0    60   ~ 0
-~IC'
-$Comp
 L SJ JP5
 U 1 1 52E3A596
 P 7450 2300
@@ -775,12 +730,12 @@ $EndComp
 $Comp
 L +3.3VADC #PWR014
 U 1 1 52F431B2
-P 3450 2450
-F 0 "#PWR014" H 3450 2570 20  0001 C CNN
-F 1 "+3.3VADC" H 3450 2540 30  0000 C CNN
-F 2 "" H 3450 2450 60  0000 C CNN
-F 3 "" H 3450 2450 60  0000 C CNN
-	1    3450 2450
+P 3450 2500
+F 0 "#PWR014" H 3450 2620 20  0001 C CNN
+F 1 "+3.3VADC" H 3450 2590 30  0000 C CNN
+F 2 "" H 3450 2500 60  0000 C CNN
+F 3 "" H 3450 2500 60  0000 C CNN
+	1    3450 2500
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -971,7 +926,7 @@ F 1 "ST-USBLC6-2" H 3200 6450 60  0000 C CNN
 F 2 "" H 2800 6700 60  0000 C CNN
 F 3 "" H 2800 6700 60  0000 C CNN
 	1    2800 6700
-	1    0    0    -1  
+	-1   0    0    1   
 $EndComp
 NoConn ~ 1600 6750
 $Comp
@@ -985,9 +940,9 @@ F 3 "" H 2850 7050 60  0000 C CNN
 	1    2850 7050
 	1    0    0    -1  
 $EndComp
-Text Label 3600 6650 0    60   ~ 0
+Text Label 3950 6500 1    60   ~ 0
 D-
-Text Label 3600 6750 0    60   ~ 0
+Text Label 4050 6500 1    60   ~ 0
 D+
 $Comp
 L L L3
@@ -1013,9 +968,9 @@ F 3 "" H 3300 6350 60  0000 C CNN
 $EndComp
 Text Label 1850 6400 0    60   ~ 0
 VBUS_IN
-Text Label 1850 6650 0    60   ~ 0
+Text Label 2150 6750 0    60   ~ 0
 D-_IN
-Text Label 1900 6700 3    60   ~ 0
+Text Label 2150 6650 0    60   ~ 0
 D+_IN
 Text Label 1650 7050 1    60   ~ 0
 G_I1
@@ -1043,9 +998,9 @@ F 3 "" H 3500 6750 60  0000 C CNN
 	1    3500 6750
 	1    0    0    -1  
 $EndComp
-Text Label 3150 6650 0    60   ~ 0
-D-B
 Text Label 3150 6750 0    60   ~ 0
+D-B
+Text Label 3150 6650 0    60   ~ 0
 D+B
 $Comp
 L +5V #PWR024
@@ -1587,18 +1542,6 @@ Wire Wire Line
 	6700 2500 6700 2300
 Connection ~ 6700 2300
 Wire Wire Line
-	7250 2600 6950 2600
-Wire Wire Line
-	7250 2700 7100 2700
-Wire Wire Line
-	7250 2800 6950 2800
-Wire Wire Line
-	6850 2600 6700 2600
-Wire Wire Line
-	6700 2700 7000 2700
-Wire Wire Line
-	6700 2800 6850 2800
-Wire Wire Line
 	3250 5850 3250 5600
 Wire Wire Line
 	3250 5650 3450 5650
@@ -1764,36 +1707,19 @@ Wire Wire Line
 Wire Wire Line
 	1650 7250 1650 7300
 Wire Wire Line
-	1600 6650 2450 6650
-Wire Wire Line
-	1600 6700 2400 6700
-Wire Wire Line
-	2400 6700 2400 6750
-Wire Wire Line
-	2400 6750 2450 6750
-Wire Wire Line
 	1700 6400 1700 6600
 Wire Wire Line
 	1700 6600 1600 6600
 Wire Wire Line
 	1700 6400 3050 6400
 Wire Wire Line
-	2750 6400 2750 6450
-Wire Wire Line
-	2850 6950 2850 7050
-Wire Wire Line
 	3150 6650 3350 6650
 Wire Wire Line
 	3150 6750 3450 6750
 Wire Wire Line
 	3300 6400 3150 6400
-Connection ~ 2750 6400
 Wire Wire Line
 	3300 6350 3300 6400
-Wire Wire Line
-	3450 6650 4050 6650
-Wire Wire Line
-	3550 6750 3950 6750
 Wire Wire Line
 	4050 2900 4050 2450
 Wire Wire Line
@@ -2169,17 +2095,11 @@ Wire Wire Line
 	1900 4000 1800 4000
 Connection ~ 1900 3900
 Wire Wire Line
-	1800 4100 2000 4100
-Wire Wire Line
-	2000 4100 2000 3900
+	2000 3900 2000 4200
 Wire Wire Line
 	2000 3900 2850 3900
 Wire Wire Line
-	1800 4200 2050 4200
-Wire Wire Line
-	2050 4200 2050 4000
-Wire Wire Line
-	2050 4000 2850 4000
+	1950 4000 2850 4000
 Wire Wire Line
 	950  4100 1100 4100
 Wire Wire Line
@@ -2199,9 +2119,9 @@ F 3 "" H 950 3800 60  0000 C CNN
 	1    950  3800
 	1    0    0    -1  
 $EndComp
-Text Label 1000 4100 2    60   ~ 0
+Text Label 950  4200 2    60   ~ 0
 XIN
-Text Label 1000 4200 2    60   ~ 0
+Text Label 950  4100 2    60   ~ 0
 XOUT
 Text Label 2050 3900 0    60   ~ 0
 XIN3V3
@@ -3314,4 +3234,92 @@ Text Label 5750 6550 2    60   ~ 0
 DEBUG_TX
 Text Label 5750 6650 2    60   ~ 0
 DEBUG_RX
+Text Label 8250 3150 0    60   ~ 0
+ROI2
+Text Label 8200 3900 0    60   ~ 0
+MOI2
+Text Label 9500 3700 0    60   ~ 0
+ROA
+Text Label 9500 4950 0    60   ~ 0
+MOA
+Text Label 10000 3250 1    60   ~ 0
+ROA2
+Text Label 10000 4500 1    60   ~ 0
+MOA2
+Text Label 10300 4300 1    60   ~ 0
+MOA3
+Text Label 10400 3600 1    60   ~ 0
+ROA3
+Wire Wire Line
+	2000 4200 1800 4200
+Wire Wire Line
+	1950 4000 1950 4100
+Wire Wire Line
+	1950 4100 1800 4100
+$Comp
+L GND #PWR057
+U 1 1 52F8A394
+P 1850 4400
+F 0 "#PWR057" H 1850 4400 30  0001 C CNN
+F 1 "GND" H 1850 4330 30  0001 C CNN
+F 2 "" H 1850 4400 60  0000 C CNN
+F 3 "" H 1850 4400 60  0000 C CNN
+	1    1850 4400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1800 4300 1850 4300
+Wire Wire Line
+	1850 4300 1850 4400
+Wire Wire Line
+	2850 6950 2600 6950
+Wire Wire Line
+	2600 6950 2600 6400
+Connection ~ 2600 6400
+Wire Wire Line
+	2750 6450 2900 6450
+Wire Wire Line
+	2900 6450 2900 7000
+Wire Wire Line
+	2900 7000 2850 7000
+Wire Wire Line
+	2850 7000 2850 7050
+Wire Wire Line
+	3450 6650 4050 6650
+Wire Wire Line
+	3950 6750 3550 6750
+Wire Wire Line
+	2450 6650 2050 6650
+Wire Wire Line
+	2050 6650 2050 6700
+Wire Wire Line
+	2050 6700 1600 6700
+Wire Wire Line
+	1600 6650 1950 6650
+Wire Wire Line
+	1950 6650 1950 6750
+Wire Wire Line
+	1950 6750 2450 6750
+$Comp
+L TEST_POINT P37
+U 1 1 52F8B72C
+P 6700 1600
+F 0 "P37" H 6875 1600 40  0000 C CNN
+F 1 "TEST_POINT" H 6700 1350 60  0001 C CNN
+F 2 "" H 6700 1600 60  0000 C CNN
+F 3 "" H 6700 1600 60  0000 C CNN
+	1    6700 1600
+	1    0    0    -1  
+$EndComp
+$Comp
+L TEST_POINT P38
+U 1 1 52F8B732
+P 6700 1700
+F 0 "P38" H 6875 1700 40  0000 C CNN
+F 1 "TEST_POINT" H 6700 1450 60  0001 C CNN
+F 2 "" H 6700 1700 60  0000 C CNN
+F 3 "" H 6700 1700 60  0000 C CNN
+	1    6700 1700
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

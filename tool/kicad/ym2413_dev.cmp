@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Sun 09 Feb 2014 07:53:03 PM CET
+Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Mon 10 Feb 2014 07:47:10 AM CET
 
 BeginCmp
 TimeStamp = /52F426B6;
@@ -249,7 +249,7 @@ BeginCmp
 TimeStamp = /52F74BCE;
 Reference = IC1;
 ValeurCmp = 6N135;
-IdModule  = SO8E;
+IdModule  = DIL8;
 EndCmp
 
 BeginCmp
@@ -298,14 +298,14 @@ BeginCmp
 TimeStamp = /52F821B5;
 Reference = K1;
 ValeurCmp = CONN_3;
-IdModule  = ;
+IdModule  = PIN_1X3;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7A1A7;
 Reference = K2;
 ValeurCmp = CONN_3;
-IdModule  = ;
+IdModule  = PIN_1X3;
 EndCmp
 
 BeginCmp
@@ -368,7 +368,7 @@ BeginCmp
 TimeStamp = /52F74BDD;
 Reference = P5;
 ValeurCmp = MIDI-IN;
-IdModule  = ;
+IdModule  = PIN_1X5_S;
 EndCmp
 
 BeginCmp
@@ -550,14 +550,14 @@ BeginCmp
 TimeStamp = /52F72DE8;
 Reference = P31;
 ValeurCmp = CONN_2;
-IdModule  = ;
+IdModule  = PIN_1X2_S;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F72DF5;
 Reference = P32;
 ValeurCmp = CONN_2;
-IdModule  = ;
+IdModule  = PIN_1X2_S;
 EndCmp
 
 BeginCmp
@@ -575,10 +575,17 @@ IdModule  = Test_Pad_1mm;
 EndCmp
 
 BeginCmp
-TimeStamp = /52E3A865;
+TimeStamp = /52F86C85;
 Reference = P35;
-ValeurCmp = CONN_4;
-IdModule  = ;
+ValeurCmp = CONN_6;
+IdModule  = PIN_1X4_S;
+EndCmp
+
+BeginCmp
+TimeStamp = /52F868F0;
+Reference = P36;
+ValeurCmp = CONN_5;
+IdModule  = PIN_1X5_S;
 EndCmp
 
 BeginCmp
@@ -977,14 +984,14 @@ BeginCmp
 TimeStamp = /52F7A857;
 Reference = U1;
 ValeurCmp = SN74LVC2T45;
-IdModule  = ;
+IdModule  = R-PDSO-G8;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F49DE9;
 Reference = U2;
 ValeurCmp = ST-USBLC6-2;
-IdModule  = ;
+IdModule  = SOT-23-6L;
 EndCmp
 
 BeginCmp
@@ -1005,14 +1012,14 @@ BeginCmp
 TimeStamp = /52F72FCC;
 Reference = U5;
 ValeurCmp = LM386;
-IdModule  = ;
+IdModule  = R-PDSO-G8;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F748ED;
 Reference = U6;
 ValeurCmp = LM386;
-IdModule  = ;
+IdModule  = HRS-U.FL-R-SMT;
 EndCmp
 
 BeginCmp

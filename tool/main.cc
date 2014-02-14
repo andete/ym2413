@@ -19,6 +19,7 @@
 #include "timer0.h"
 #include "swd.h"
 #include "usart0.h"
+#include "led.h"
 #include "usb.h"
 
 static void setup() {
@@ -34,6 +35,7 @@ static void setup() {
   timer0::setup();
   swd::setup();
   usart0::setup();
+  led::setup();
   usb::setup();
 }
 

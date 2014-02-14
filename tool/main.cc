@@ -15,6 +15,7 @@
 #include "timer0.h"
 #include "swd.h"
 #include "usart0.h"
+#include "usb.h"
 
 static void setup() {
   // Chip errata
@@ -27,6 +28,7 @@ static void setup() {
   timer0::setup();
   swd::setup();
   usart0::setup();
+  usb::setup();
 }
 
 int main(int argc, char ** argv) {

@@ -117,6 +117,7 @@ INCLUDEPATHS += \
 -I$(SILABS)/emlib/inc \
 -I$(SILABS)/common/drivers \
 -I$(SILABS)/common/bsp \
+-I$(SILABS)/usb/inc \
 -Iconfig \
 -I$(SILABS)/reptile/glib
 

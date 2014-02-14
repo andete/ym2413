@@ -196,11 +196,13 @@ extern "C" {
 #define PORT_FULL_SPEED                   1     /**< Full speed return value for USBH_GetPortSpeed(). */
 #define PORT_LOW_SPEED                    2     /**< Low speed return value for USBH_GetPortSpeed().  */
 
+#ifndef __cplusplus
 #if defined( __GNUC__  )                  /* GCC compilers */
 #if defined( __CHAR16_TYPE__ )
 typedef __CHAR16_TYPE__ char16_t;
 #else
 typedef unsigned short char16_t;
+#endif
 #endif
 
 #elif defined( __ICCARM__ )               /* IAR compiler */
@@ -223,7 +225,7 @@ typedef struct                                                  \
 {                                                               \
   uint8_t  len;                                                 \
   uint8_t  type;                                                \
-  char16_t name[ 1 + sizeof( (char16_t[]){__VA_ARGS__} ) / 2];  \
+  char16_t name[ (sizeof( (char16_t[]){__VA_ARGS__} ) / 2)];    \
 } __attribute__ ((packed)) _##_name;                            \
 EFM32_PACK_END()                                                \
 EFM32_ALIGN( 4 )                                                \
@@ -233,9 +235,30 @@ static const _##_name _name __attribute__ ((aligned(4)))=       \
   .len  = sizeof( _##_name ) - 2,                               \
   .type = USB_STRING_DESCRIPTOR,                                \
   .name = {__VA_ARGS__},                                        \
+}                                                               \
+EFM32_PACK_END()
+
+#if 0
+#define STATIC_CONST_STRING_DESC( _name,  args...)              \
+EFM32_PACK_START( 1 )                                           \
+typedef struct                                                  \
+{                                                               \
+  uint8_t  len;                                                 \
+  uint8_t  type;                                                \
+  char16_t name[ 1 + sizeof( (char16_t[]){args} ) / 2];  \
+} __attribute__ ((packed)) _##_name;                            \
+EFM32_PACK_END()                                                \
+EFM32_ALIGN( 4 )                                                \
+EFM32_PACK_START( 1 )                                           \
+static const _##_name _name __attribute__ ((aligned(4)))=       \
+{                                                               \
+  .len  = sizeof( _##_name ) - 2,                               \
+  .type = USB_STRING_DESCRIPTOR,                                \
+  .name = {args},                                        \
   .name[ ( ( sizeof( _##_name ) - 2 ) / 2 ) - 1 ] = '\0'        \
 }                                                               \
 EFM32_PACK_END()
+#endif
 
 /** Macro for creating USB compliant language string descriptors.
  *  @n Example: STATIC_CONST_STRING_DESC_LANGID( langID, 0x04, 0x09 );

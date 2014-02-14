@@ -9,6 +9,8 @@
 #include "em_leuart.h"
 #include "em_dma.h"
 #include "em_gpio.h"
+#include "em_usb.h"
+#include "em_int.h"
 
 // own code
 #include "dma.h"
@@ -24,6 +26,7 @@
 #include "usb.h"
 
 static void setup() {
+
   // Chip errata
   CHIP_Init();
 
@@ -39,6 +42,7 @@ static void setup() {
   led::setup();
   ym::setup();
   usb::setup();
+
 }
 
 int main(int argc, char ** argv) {

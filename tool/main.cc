@@ -20,6 +20,7 @@
 #include "swd.h"
 #include "usart0.h"
 #include "led.h"
+#include "ym.h"
 #include "usb.h"
 
 static void setup() {
@@ -36,6 +37,7 @@ static void setup() {
   swd::setup();
   usart0::setup();
   led::setup();
+  ym::setup();
   usb::setup();
 }
 

@@ -1,3 +1,5 @@
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil -*- */
+
 namespace leuart0 {
 
   // extra serial interface for debugging

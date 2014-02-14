@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil -*- */
 
-namespace adc {
+namespace adc0 {
 
   static void setup() {
     // TODO document

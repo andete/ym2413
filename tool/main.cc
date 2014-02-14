@@ -10,6 +10,8 @@
 // own code
 #include "tick.h"
 #include "clock.h"
+#include "adc.h"
+#include "leuart0.h"
 
 static void setup() {
   // Chip errata
@@ -18,6 +20,7 @@ static void setup() {
   tick::setup();
   clock::setup();
   adc::setup();
+  leuart0::setup();
 }
 
 int main(int argc, char ** argv) {

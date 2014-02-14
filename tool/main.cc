@@ -14,6 +14,7 @@
 #include "leuart0.h"
 #include "timer0.h"
 #include "swd.h"
+#include "usart0.h"
 
 static void setup() {
   // Chip errata
@@ -25,6 +26,7 @@ static void setup() {
   leuart0::setup();
   timer0::setup();
   swd::setup();
+  usart0::setup();
 }
 
 int main(int argc, char ** argv) {

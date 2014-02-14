@@ -6,8 +6,12 @@
 #include "em_adc.h"
 #include "em_cmu.h"
 #include "em_usart.h"
+#include "em_leuart.h"
+#include "em_dma.h"
+#include "em_gpio.h"
 
 // own code
+#include "dma.h"
 #include "tick.h"
 #include "clock.h"
 #include "adc0.h"
@@ -23,6 +27,7 @@ static void setup() {
 
   tick::setup();
   clock::setup();
+  dma::setup();
   adc0::setup();
   leuart0::setup();
   timer0::setup();

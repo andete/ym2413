@@ -1,5 +1,18 @@
 /* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil -*- */
 
+#define YM_D0  0
+#define YM_D1  1
+#define YM_D2  2
+#define YM_D3  3
+#define YM_D4  4
+#define YM_D5  5
+#define YM_D6  6
+#define YM_D7  7
+#define YM_A0  8
+#define YM_WE  9
+#define YM_CS 10
+#define YM_IC 11
+
 namespace ym {
 
   static const struct {
@@ -23,10 +36,19 @@ namespace ym {
 
   static void setup() {
     for (int i = 0; i < 12; ++i) {
-      GPIO_PinModeSet(pins[i].port, pins[i].pin, gpioModePushPull, pins[i].negative_logic?1:0);
+      GPIO_PinModeSet(pins[i].port, pins[i].pin, gpioModePushPull, 
+                      pins[i].negative_logic?1:0);
     }
   }
 
   // todo clever access methods
+
+  static inline void high(const uint8_t n) {
+    GPIO_PinOutSet(pins[n].port, pins[n].pin);
+  }
+
+  static inline void low(const uint8_t n) {
+    GPIO_PinOutClear(pins[n].port, pins[n].pin);
+  }
 
 }

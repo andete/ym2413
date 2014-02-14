@@ -36,6 +36,24 @@ namespace leuart0 {
     .hprot   = 0,              // No read/write source protection
   };
 
+  static inline void _activate_dma() {
+    DMA_ActivateBasic(
+       LEUART0_DMA_CHANNEL,       // Activate channel selected
+       true,                      // Use primary descriptor
+       false,                     // No DMA burst
+       (void *) &rxbuf,           // Destination address
+       (void *) &LEUART0->RXDATA, // Source address
+       LEUART0_BUF_MAX - 1);      // Size of buffer minus1
+  }
+  static inline void _reactivate_dma() {
+    DMA_ActivateBasic(
+       LEUART0_DMA_CHANNEL,       // Activate channel selected
+       true,                      // Use primary descriptor
+       false,                     // No DMA burst
+       NULL,                      // keep
+       NULL,                      // keep
+       LEUART0_BUF_MAX - 1);      // Size of buffer minus1
+  }
 
   static void setup() {
     GPIO_PinModeSet(gpioPortD, 4, gpioModePushPull, 1);
@@ -52,13 +70,7 @@ namespace leuart0 {
     DMA_CfgDescr(LEUART0_DMA_CHANNEL, true, &descrCfg);
 
     // Starting the transfer. Using Basic Mode
-    DMA_ActivateBasic(
-       LEUART0_DMA_CHANNEL,       // Activate channel selected
-       true,                      // Use primary descriptor
-       false,                     // No DMA burst
-       (void *) &rxbuf,           // Destination address
-       (void *) &LEUART0->RXDATA, // Source address
-       LEUART0_BUF_MAX - 1);      // Size of buffer minus1
+    _activate_dma();
 
     // trigger on newline
     LEUART0->SIGFRAME = '\n';
@@ -71,4 +83,22 @@ namespace leuart0 {
 
   }
 
+}
+
+void LEUART0_IRQHandler(void)
+{
+  // Store and reset pending interupts
+  const uint32_t leuartif = LEUART_IntGet(LEUART0);
+  LEUART_IntClear(LEUART0, leuartif);
+
+  // if signal frame interrupt
+  if (leuartif & LEUART_IF_SIGF) {
+    // Zero-terminate rx buffer
+    const uint32_t len = LEUART0_BUF_MAX - 1 - (( dma_control_block->CTRL >> 4 ) & 0x3FF);
+    leuart0::rxbuf[len-1] = 0;
+
+    // TODO handle received message
+
+    leuart0::_reactivate_dma();
+  }
 }

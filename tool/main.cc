@@ -25,6 +25,7 @@ static void setup() {
   // Chip errata
   CHIP_Init();
 
+  // setup all subsystems
   tick::setup();
   clock::setup();
   dma::setup();

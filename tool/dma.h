@@ -3,6 +3,9 @@
 /* DMA control block, must be aligned to 256. */
 DMA_DESCRIPTOR_TypeDef dma_control_block[DMA_CHAN_COUNT * 2] __attribute__ ((aligned(256)));
 
+// list the DMA channel numbers here
+#define LEUART0_DMA_CHANNEL 0
+
 namespace dma {
 
   DMA_Init_TypeDef dmaInit = {

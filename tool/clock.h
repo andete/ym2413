@@ -1,3 +1,5 @@
+/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil -*- */
+
 namespace clock {
 
   // all clocks are enabled together

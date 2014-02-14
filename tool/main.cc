@@ -17,6 +17,7 @@ static void setup() {
 
   tick::setup();
   clock::setup();
+  adc::setup();
 }
 
 int main(int argc, char ** argv) {

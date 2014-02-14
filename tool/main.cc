@@ -9,12 +9,14 @@
 
 // own code
 #include "tick.h"
+#include "clock.h"
 
 static void setup() {
   // Chip errata
   CHIP_Init();
 
   tick::setup();
+  clock::setup();
 }
 
 int main(int argc, char ** argv) {

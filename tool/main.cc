@@ -42,7 +42,7 @@ static void setup() {
   usart0::setup();
   led::setup();
   ym::setup();
-  usb::setup();
+  usbcdc::setup();
 
 }
 
@@ -51,6 +51,9 @@ int main(int argc, char ** argv) {
   (void)argv;
 
   setup();
+
+  tick::delay(100);
+  usbcdc::print("Hello, world\r\n");
 
   while (true) {
   }

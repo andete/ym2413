@@ -2,6 +2,8 @@
 
 // USB CDC code based on silabs/kits/EFM32GG_DK3750/examples/usbdcdc
 
+namespace usbcdc {
+
 // Define USB endpoint addresses
 #define EP_DATA_OUT       0x01  /* Endpoint for USB data reception.       */
 #define EP_DATA_IN        0x81  /* Endpoint for USB data transmission.    */
@@ -30,8 +32,6 @@ EFM32_PACK_END()
 
 
 // prototypes
-namespace usb {
-
   static int data_received(USB_Status_TypeDef status,
                            uint32_t xferred,
                            uint32_t remaining);
@@ -44,10 +44,6 @@ namespace usb {
 
   static void state_change(USBD_State_TypeDef oldState,
                            USBD_State_TypeDef newState);
-
-}
-
-namespace usb {
 
   EFM32_ALIGN(4)
   static const USB_DeviceDescriptor_TypeDef deviceDesc __attribute__ ((aligned(4)))=
@@ -196,8 +192,8 @@ namespace usb {
 
   static const USBD_Callbacks_TypeDef callbacks = {
     .usbReset        = NULL,
-    .usbStateChange  = usb::state_change,
-    .setupCmd        = usb::setup_cmd,
+    .usbStateChange  = usbcdc::state_change,
+    .setupCmd        = usbcdc::setup_cmd,
     .isSelfPowered   = NULL,
     .sofInt          = NULL
   };
@@ -552,5 +548,14 @@ static int line_coding_received(USB_Status_TypeDef status,
   }
   return USB_STATUS_REQ_ERR;
 }
+
+  void write(const uint8_t * data, uint16_t len) {
+    USBD_Write(EP_DATA_IN, (void*) data, len, data_transmitted);
+  }
+
+  void print(const char * str) {
+    const uint16_t len = strnlen(str, 128);
+    write(reinterpret_cast<const uint8_t*>(str), len);
+  }
 
 }

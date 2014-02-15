@@ -11,6 +11,7 @@
 #include "em_gpio.h"
 #include "em_usb.h"
 #include "em_int.h"
+#include "efm32gg_uart.h"
 
 // own code
 #include "dma.h"

@@ -93,8 +93,8 @@ DEPFLAGS = -MMD -MP -MF $(@:.o=.d)
 # Add -Wa,-ahld=$(LST_DIR)/$(@F:.o=.lst) to CFLAGS to produce assembly list files
 #
 override CFLAGS += -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m3 -mthumb \
--ffunction-sections -fdata-sections -fomit-frame-pointer \
--DDEBUG_EFM  $(DEPFLAGS)
+-mfix-cortex-m3-ldrd -ffunction-sections -fdata-sections -fomit-frame-pointer \
+-DDEBUG_EFM_USER  $(DEPFLAGS)
 
 CXFLAGS = -fno-exceptions -fno-rtti -std=gnu++11
 CFLAGSEXTRA = -std=gnu99
@@ -104,9 +104,13 @@ override ASMFLAGS += -x assembler-with-cpp -D$(DEVICE) -Wall -Wextra -mcpu=corte
 #
 # NOTE: The -Wl,--gc-sections flag may interfere with debugging using gdb.
 #
+
 override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
 -mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld  \
 -Wl,--gc-sections
+#override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
+#-mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/efm32gg.ld  \
+#-Wl,--gc-sections
 
 LIBS = -Wl,--start-group -lgcc -lc_s -lnosys   -Wl,--end-group
 
@@ -139,6 +143,9 @@ $(SILABS)/emlib/src/em_system.c \
 $(SILABS)/emlib/src/em_leuart.c \
 $(SILABS)/emlib/src/em_i2c.c \
 $(SILABS)/emlib/src/em_dma.c \
+$(SILABS)/emlib/src/em_timer.c \
+$(SILABS)/emlib/src/em_adc.c \
+$(SILABS)/emlib/src/em_usart.c \
 $(SILABS)/usb/src/em_usbd.c \
 $(SILABS)/usb/src/em_usbdch9.c \
 $(SILABS)/usb/src/em_usbhal.c \
@@ -151,7 +158,8 @@ CX_SRC = main.cc
 s_SRC += 
 
 S_SRC +=  \
-$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/startup_efm32gg.S
+$(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/startup_efm32gg.S
+#$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/startup_efm32gg.S
 
 ####################################################################
 # Rules                                                            #
@@ -210,9 +218,8 @@ $(EXE_DIR)/$(PROJECTNAME).out: $(OBJS)
 # Create binary file
 $(EXE_DIR)/$(PROJECTNAME).bin: $(EXE_DIR)/$(PROJECTNAME).out
 	@echo "Creating binary file"
-	$(OBJCOPY) -O binary $(EXE_DIR)/$(PROJECTNAME).out $(EXE_DIR)/$(PROJECTNAME).bin
-# Uncomment next line to produce assembly listing of entire program
-#	$(DUMP) -h -S -C $(EXE_DIR)/$(PROJECTNAME).out>$(LST_DIR)/$(PROJECTNAME)out.lst
+	$(OBJCOPY) --verbose -O binary $(EXE_DIR)/$(PROJECTNAME).out $(EXE_DIR)/$(PROJECTNAME).bin
+	$(DUMP) -h -S -C $(EXE_DIR)/$(PROJECTNAME).out>$(LST_DIR)/$(PROJECTNAME)out.lst
 
 clean:
 ifeq ($(filter $(MAKECMDGOALS),all debug release),)

@@ -549,10 +549,16 @@ static int line_coding_received(USB_Status_TypeDef status,
   return USB_STATUS_REQ_ERR;
 }
 
+  // data _must_ be 4-byte aligned!
+  // data needs to be accessable after this call returns!
   void write(const uint8_t * data, uint16_t len) {
     USBD_Write(EP_DATA_IN, (void*) data, len, data_transmitted);
   }
 
+  // data _must_ be 4-byte aligned!
+  // data needs to be accessable after this call returns!
+  // TODO deal with this in a smart way to hide these details
+  // from external code!
   void print(const char * str) {
     const uint16_t len = strnlen(str, 128);
     write(reinterpret_cast<const uint8_t*>(str), len);

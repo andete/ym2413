@@ -23,7 +23,7 @@
 #include "usart0.h"
 #include "led.h"
 #include "ym.h"
-#include "usb.h"
+#include "usbcdc.h"
 
 static void setup() {
 

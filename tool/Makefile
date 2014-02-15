@@ -138,7 +138,13 @@ $(SILABS)/emlib/src/em_rtc.c \
 $(SILABS)/emlib/src/em_system.c \
 $(SILABS)/emlib/src/em_leuart.c \
 $(SILABS)/emlib/src/em_i2c.c \
-$(SILABS)/emlib/src/em_dma.c
+$(SILABS)/emlib/src/em_dma.c \
+$(SILABS)/usb/src/em_usbd.c \
+$(SILABS)/usb/src/em_usbdch9.c \
+$(SILABS)/usb/src/em_usbhal.c \
+$(SILABS)/usb/src/em_usbdep.c \
+$(SILABS)/usb/src/em_usbdint.c \
+$(SILABS)/usb/src/em_usbtimer.c
 
 CX_SRC = main.cc
 

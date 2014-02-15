@@ -1,5 +1,7 @@
 /* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil -*- */
 
+// TODO: I wonder if we can just use USBTIMER_DelayMs(1000); isof using the tick timer
+
 namespace tick {
 
   static volatile uint32_t ms = 0;

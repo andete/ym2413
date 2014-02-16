@@ -11,6 +11,7 @@
 #include "em_gpio.h"
 #include "em_usb.h"
 #include "em_int.h"
+#include "em_timer.h"
 #include "efm32gg_uart.h"
 
 // own code
@@ -53,7 +54,7 @@ int main(int argc, char ** argv) {
   setup();
 
   tick::delay(100);
-  usbcdc::print("Hello, world\r\n");
+  usbcdc::print("Hello, world  \r\n");
 
   while (true) {
   }

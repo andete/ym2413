@@ -44,16 +44,16 @@ namespace ym {
     // Select CC channel parameters
     TIMER_InitCC_TypeDef timerCCInit = {
       .eventCtrl  = timerEventEveryEdge,
-      .edge       = timerEdgeBoth,
-      .prsSel     = timerPRSSELCh0,
+      .edge       = timerEdgeNone, // we don't care about input
+      .prsSel     = timerPRSSELCh0, // not used
       .cufoa      = timerOutputActionNone,
       .cofoa      = timerOutputActionNone,
-      .cmoa       = timerOutputActionToggle,
+      .cmoa       = timerOutputActionNone,
       .mode       = timerCCModePWM,
-      .filter     = false,
-      .prsInput   = false,
-      .coist      = false,
-      .outInvert  = false,
+      .filter     = false, // no filter
+      .prsInput   = false, // no TIMERnCCx input
+      .coist      = false, // don't clear output when counter disabled
+      .outInvert  = false, // don't invert output
     };
 
     // Configure CC channel 0
@@ -64,31 +64,33 @@ namespace ym {
 
     // TODO: actual timer setup to create our signal
     // Set Top Value
-    const int32_t PWM_FREQ = 10000;
-    TIMER_TopSet(TIMER0, CMU_ClockFreqGet(cmuClock_HFPER)/PWM_FREQ);
+    const uint32_t PWM_FREQ = 3*1000*1000; // 3 Mhz
+    const uint32_t topValue = CMU_ClockFreqGet(cmuClock_HFPER)/PWM_FREQ;
+    TIMER_TopSet(TIMER0, topValue);
 
-    /* Set compare value starting at 0 - it will be incremented in the interrupt handler */
-    TIMER_CompareBufSet(TIMER0, 0, 0);
+    // 50% duty cycle
+    TIMER_CompareSet(TIMER0, 0, topValue/2);
  
     // TODO
     // Select timer parameters
     TIMER_Init_TypeDef timerInit = {
       .enable     = false,
-      .debugRun   = true,
-      .prescale   = timerPrescale64,
-      .clkSel     = timerClkSelHFPerClk,
-      .count2x    = false,
-      .ati        =false,
-      .fallAction = timerInputActionNone,
-      .riseAction = timerInputActionNone,
-      .mode       = timerModeUp,
-      .dmaClrAct  = false,
-      .quadModeX4 = false,
-      .oneShot    = false,
-      .sync       = false,
+      .debugRun   = false, // Keep counter during debug halt
+      .prescale   = timerPrescale1, // no pre-scaling
+      .clkSel     = timerClkSelHFPerClk, // Select HFPER clock
+      .count2x    = false, // double count mode
+      .ati        = false, // 
+      .fallAction = timerInputActionNone, // no action
+      .riseAction = timerInputActionNone, // no action
+      .mode       = timerModeUp, // count up
+      .dmaClrAct  = false, // no dma involved
+      .quadModeX4 = false, // no quadrature mode
+      .oneShot    = false, // keep running
+      .sync       = false, // 
     };
   
-    // TODO
+    // TODO; we may want to have interrupts later to do 
+    // some handling
     // Enable overflow interrupt
     // TIMER_IntEnable(TIMER0, TIMER_IF_OF);
   

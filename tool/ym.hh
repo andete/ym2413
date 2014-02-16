@@ -63,6 +63,7 @@ namespace ym {
   static inline void start_clock(const uint32_t freq=3579545) {
     const uint32_t topValue = CMU_ClockFreqGet(cmuClock_HFPER)/freq;
     TIMER_TopSet(TIMER0, topValue);
+    // 50 % duty cycle
     TIMER_CompareSet(TIMER0, 0, topValue/2);
     TIMER_Enable(TIMER0, true);
   }

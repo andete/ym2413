@@ -47,6 +47,10 @@ namespace ym {
   }
 
   // todo clever access methods
+  // as most pins are on gpio port C you can actually write
+  // to them all in one op
+
+  // see http://downloads.energymicro.com/documentation/doxygen/group__GPIO.html#ged42e78c374311828a1eb62fc45dae2d
 
   static inline void high(const uint8_t n) {
     GPIO_PinOutSet(pins[n].port, pins[n].pin);

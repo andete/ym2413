@@ -15,17 +15,17 @@
 #include "efm32gg_uart.h"
 
 // own code
-#include "dma.h"
-#include "tick.h"
-#include "clock.h"
-#include "adc0.h"
-#include "leuart0.h"
-#include "timer0.h"
-#include "swd.h"
-#include "usart0.h"
-#include "led.h"
-#include "ym.h"
-#include "usbcdc.h"
+#include "dma.hh"
+#include "tick.hh"
+#include "clock.hh"
+#include "adc0.hh"
+#include "leuart0.hh"
+#include "timer0.hh"
+#include "swd.hh"
+#include "usart0.hh"
+#include "led.hh"
+#include "usbcdc.hh"
+#include "ym.hh"
 
 static void setup() {
 

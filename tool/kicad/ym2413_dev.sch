@@ -1956,7 +1956,7 @@ F 1 "CONN_3" V 10900 3950 40  0000 C CNN
 F 2 "" H 10850 3950 60  0000 C CNN
 F 3 "" H 10850 3950 60  0000 C CNN
 	1    10850 3950
-	1    0    0    -1  
+	1    0    0    1   
 $EndComp
 Wire Wire Line
 	10500 3850 10400 3850
@@ -1981,8 +1981,6 @@ Wire Wire Line
 	10500 4050 10400 4050
 Wire Wire Line
 	10400 4050 10400 4150
-Text Notes 10700 5000 1    60   ~ 0
-TODO: actual audio\nconnector
 $Comp
 L SN74LVC2T45 U1
 U 1 1 52F7A857

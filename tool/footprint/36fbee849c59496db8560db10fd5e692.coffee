@@ -40,25 +40,42 @@ footprint = () ->
   pad1 = new RoundPad pad_r, drill_r*2
   pad1.x = drill3.x
   pad1.y = 0
-  pad1.name = 3
+  pad1.name = 1
+
+  la1 = new Label "GND"
+  la1.dy= 0.8
+  la1.y = 2.3
+  la1.x = pad1.x-1
 
   pad2 = clone pad1
   pad2.x = drill5.x
   pad2.y = 5/2
-  pad2.name = 5
+  pad2.name = 11
 
   pad3 = mirror_x clone pad2
-  pad3.name = 4
+  pad3.name = 10
 
   pad4 = clone pad2
   pad4.y += 2.5
-  pad4.name = 6
+  pad4.name = 3
+
+  la2 = new Label "R"
+  la2.dy= 0.8
+  la2.y = pad4.y
+  la2.x = pad4.x - 2
 
   pad5 = mirror_x clone pad4
-  pad5.name = 7
+  pad5.name = 2
+
+  la3 = new Label "L"
+  la3.dy= 0.8
+  la3.y = pad5.y
+  la3.x = pad5.x - 2
 
   pads = [pad1, pad2, pad3, pad4, pad5]
  
+  la = [la1, la2, la3]
+
   name = new Name 8
 
   total_y = 12
@@ -83,5 +100,5 @@ footprint = () ->
   docu = combine [r2,r3]
   silk = combine [l1, r4]
 
-  combine [docu,name,pads, silk, drills]
+  combine [docu,name,pads, silk, drills, la]
  

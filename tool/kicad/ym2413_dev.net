@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/joost/prj/openmsx/ym2413/tool/kicad/ym2413_dev.sch)
-    (date "Mon 10 Feb 2014 12:28:00 PM CET")
+    (date "Mon 17 Feb 2014 01:31:19 PM CET")
     (tool "eeschema (2013-08-03 BZR 4267)-stable"))
   (components
     (comp (ref U4)
@@ -730,6 +730,16 @@
       (sheetpath (names /) (tstamps /))
       (tstamp 52F8C674)))
   (libparts
+    (libpart (lib 01jyd) (part ACPL-M21L)
+      (fields
+        (field (name Reference) U)
+        (field (name Value) ACPL-M21L))
+      (pins
+        (pin (num 1) (name AN) (type input))
+        (pin (num 3) (name CAT) (type output))
+        (pin (num 4) (name GND) (type power_in))
+        (pin (num 5) (name VO) (type output))
+        (pin (num 6) (name VCC) (type power_in))))
     (libpart (lib 01jyd) (part C)
       (fields
         (field (name Reference) C)
@@ -998,22 +1008,12 @@
         (pin (num 4) (name Gnd) (type power_in))
         (pin (num 5) (name ~) (type output))
         (pin (num 6) (name Pwr) (type power_in))
-        (pin (num 8) (name Gain) (type input))))
-    (libpart (lib 01jyd) (part ACPL-M21L)
-      (fields
-        (field (name Reference) U)
-        (field (name Value) ACPL-M21L))
-      (pins
-        (pin (num 1) (name AN) (type input))
-        (pin (num 3) (name CAT) (type output))
-        (pin (num 4) (name GND) (type power_in))
-        (pin (num 5) (name VO) (type output))
-        (pin (num 6) (name VCC) (type power_in)))))
+        (pin (num 8) (name Gain) (type input)))))
   (libraries
-    (library (logical 01jyd)
-      (uri /home/joost/prj/kicad/01jyd.lib))
     (library (logical device)
       (uri /home/joost/prj/kicad/root/usr/local/share/kicad/library/device.lib))
+    (library (logical 01jyd)
+      (uri /home/joost/prj/kicad/01jyd.lib))
     (library (logical conn)
       (uri /home/joost/prj/kicad/root/usr/local/share/kicad/library/conn.lib))
     (library (logical linear)
@@ -1059,8 +1059,8 @@
       (node (ref D9) (pin 2))
       (node (ref U6) (pin 4))
       (node (ref U6) (pin 2))
-      (node (ref K2) (pin 3))
       (node (ref C2) (pin 1))
+      (node (ref K2) (pin 1))
       (node (ref U1) (pin 4))
       (node (ref C5) (pin 1))
       (node (ref C7) (pin 1))
@@ -1363,7 +1363,7 @@
       (node (ref R52) (pin 1))
       (node (ref K2) (pin 2)))
     (net (code 74) (name /ROA3)
-      (node (ref K2) (pin 1))
+      (node (ref K2) (pin 3))
       (node (ref R53) (pin 1))
       (node (ref R51) (pin 1)))
     (net (code 75) (name "")

@@ -33,7 +33,7 @@
 
   (setup
     (last_trace_width 0.254)
-    (trace_clearance 2.032)
+    (trace_clearance 0.1524)
     (zone_clearance 0.508)
     (zone_45_only no)
     (trace_min 0.254)
@@ -215,7 +215,7 @@
   (net 126 N-0000098)
 
   (net_class Default "This is the default net class."
-    (clearance 2.032)
+    (clearance 0.1524)
     (trace_width 0.254)
     (via_dia 0.889)
     (via_drill 0.635)

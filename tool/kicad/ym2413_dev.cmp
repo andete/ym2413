@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Mon 17 Feb 2014 01:25:01 PM CET
+Cmp-Mod V01 Created by CvPcb (2013-08-03 BZR 4267)-stable date = Thu 20 Feb 2014 06:56:02 PM CET
 
 BeginCmp
 TimeStamp = /52F426B6;
@@ -158,6 +158,13 @@ BeginCmp
 TimeStamp = /52F74912;
 Reference = C23;
 ValeurCmp = 10uF;
+IdModule  = 1206;
+EndCmp
+
+BeginCmp
+TimeStamp = /530648AC;
+Reference = C24;
+ValeurCmp = 4.7uF;
 IdModule  = 1206;
 EndCmp
 

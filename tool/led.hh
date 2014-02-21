@@ -11,11 +11,11 @@ namespace led {
     { gpioPortA,  4 }, // LED 2
     { gpioPortA,  5 }, // LED 3
     { gpioPortA,  8 }, // LED 4
-    { gpioPortA,  9 }, // LED 5
-    { gpioPortA, 10 }, // LED 6
-    { gpioPortB,  7 }, // LED 7
-    { gpioPortB,  8 }, // LED 8
-    { gpioPortB, 11 }, // LED 9
+    { gpioPortE,  8 }, // LED 5
+    { gpioPortE,  9 }, // LED 6
+    { gpioPortE, 10 }, // LED 7
+    { gpioPortE, 12 }, // LED 8
+    { gpioPortE, 13 }, // LED 9
   };
 
   static void setup() {

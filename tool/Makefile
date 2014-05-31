@@ -26,6 +26,16 @@ LST_DIR = lst
 WINDOWSCS  ?= GNU Tools ARM Embedded\4.7 2012q4
 LINUXCS ?= /home/joost/prj/arm/gcc-arm-embedded/gcc-arm-none-eabi-4_7-2013q3
 SILABS := silabs
+# eACommander is installed as part of Simplicity Studio
+# it is required only to install the USB bootloader
+EACOMMANDER := /home/joost/prj/silabs/eACommander/start-eACommander.sh
+
+# LINKER_FILE := $(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld 
+LINKER_FILE := efm32gg-bootloader.ld 
+
+# settings for xmodem based transfer
+SERIAL := /dev/ttyACM3
+XMODEMPY := xmodem.py
 
 RMDIRS     := rm -rf
 RMFILES    := rm -rf
@@ -106,11 +116,8 @@ override ASMFLAGS += -x assembler-with-cpp -D$(DEVICE) -Wall -Wextra -mcpu=corte
 #
 
 override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
--mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld  \
+-mthumb -T$(LINKER_FILE) \
 -Wl,--gc-sections
-#override LDFLAGS += -Xlinker -Map=$(LST_DIR)/$(PROJECTNAME).map -mcpu=cortex-m3 \
-#-mthumb -T$(SILABS)/Device/EnergyMicro/EFM32GG/Source/G++/efm32gg.ld  \
-#-Wl,--gc-sections
 
 LIBS = -Wl,--start-group -lgcc -lc_s -lnosys   -Wl,--end-group
 
@@ -231,5 +238,9 @@ ifneq (clean,$(findstring clean, $(MAKECMDGOALS)))
 -include $(C_DEPS)
 endif
 
+# TODO find a way to script this
 upload: exe/$(PROJECTNAME).bin
-	/home/joost/prj/arm/PySWD/flashEFM32.py $<
+	python $(XMODEMPY) send $< $(SERIAL)
+
+install-bootloader: bootldld.bin
+	$(EACOMMANDER) --flash $< -r

@@ -929,9 +929,9 @@ F 3 "" H 2850 7050 60  0000 C CNN
 	1    2850 7050
 	1    0    0    -1  
 $EndComp
-Text Label 3950 6500 1    60   ~ 0
-D-
 Text Label 4050 6500 1    60   ~ 0
+D-
+Text Label 3950 6500 1    60   ~ 0
 D+
 $Comp
 L L L3
@@ -1695,10 +1695,6 @@ Wire Wire Line
 Wire Wire Line
 	3850 2900 3850 3100
 Connection ~ 3850 2900
-Wire Wire Line
-	4050 6650 4050 5600
-Wire Wire Line
-	3950 6750 3950 5600
 Wire Wire Line
 	7300 3650 7300 3700
 Wire Wire Line
@@ -2953,9 +2949,7 @@ Wire Wire Line
 Wire Wire Line
 	2850 7000 2850 7050
 Wire Wire Line
-	3450 6650 4050 6650
-Wire Wire Line
-	3950 6750 3550 6750
+	3550 6750 4050 6750
 Wire Wire Line
 	2450 6650 2050 6650
 Wire Wire Line
@@ -3315,4 +3309,10 @@ NoConn ~ 2850 4700
 NoConn ~ 2850 4850
 NoConn ~ 2850 4950
 NoConn ~ 2850 5050
+Wire Wire Line
+	3450 6650 3950 6650
+Wire Wire Line
+	3950 6650 3950 5600
+Wire Wire Line
+	4050 6750 4050 5600
 $EndSCHEMATC

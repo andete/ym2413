@@ -1,4 +1,4 @@
-EESchema-LIBRARY Version 2.3  Date: Fri 21 Feb 2014 09:52:02 AM CET
+EESchema-LIBRARY Version 2.3
 #encoding utf-8
 #
 # +3.3V
@@ -78,8 +78,8 @@ P 2 0 1 0  -10 15  -10 -15 N
 P 2 0 1 0  10 15  10 -15 N
 P 2 0 1 0  25 0  10 0 N
 P 2 0 1 0  50 0  25 0 N
-X 1 1 -50 0 0 R 25 25 1 1 I
-X 2 2 50 0 0 R 25 25 1 1 I
+X 1 1 -50 0 0 R 25 25 1 1 P
+X 2 2 50 0 0 R 25 25 1 1 P
 ENDDRAW
 ENDDEF
 #
@@ -192,7 +192,7 @@ DRAW
 P 2 0 1 0  -50 0  50 0 N
 P 6 0 1 0  10 20  10 -20  10 0  -10 20  -10 -20  10 0 N
 X ~ 1 -50 0 0 R 0 25 1 1 I
-X ~ 2 50 0 0 R 0 25 1 1 I
+X ~ 2 50 0 0 R 0 25 1 1 O
 ENDDRAW
 ENDDEF
 #
@@ -297,16 +297,16 @@ A -13 0 12 -1799 -1 0 1 0 N -25 0 0 0
 A 12 0 12 -1799 -1 0 1 0 N 0 0 25 0
 P 2 0 1 0  -25 0  -50 0 N
 P 2 0 1 0  25 0  50 0 N
-X 1 1 -50 0 0 R 25 25 1 1 I
-X 2 2 50 0 0 R 25 25 1 1 I
+X 1 1 -50 0 0 R 25 25 1 1 P
+X 2 2 50 0 0 R 25 25 1 1 P
 ENDDRAW
 ENDDEF
 #
 # LED
 #
 DEF LED D 0 40 N N 1 F N
-F0 "D" 0 100 60 H V C CNN
-F1 "LED" 5 -65 60 H V C CNN
+F0 "D" 0 100 50 H V C CNN
+F1 "LED" 5 -65 50 H V C CNN
 F2 "" 0 0 60 H V C CNN
 F3 "" 0 0 60 H V C CNN
 DRAW
@@ -388,8 +388,8 @@ P 2 0 1 0  -50 0  -10 0 N
 P 2 0 1 0  10 0  50 0 N
 P 5 0 1 0  -10 10  -10 -10  -20 -10  -20 10  -10 10 N
 P 6 0 1 0  10 0  10 10  20 10  20 -10  10 -10  10 0 N
-X ~ 1 -50 0 0 R 0 0 1 1 B
-X ~ 2 50 0 0 R 0 0 1 1 B
+X ~ 1 -50 0 0 R 0 0 1 1 P
+X ~ 2 50 0 0 R 0 0 1 1 P
 ENDDRAW
 ENDDEF
 #
@@ -464,7 +464,7 @@ F2 "" 0 0 60 H V C CNN
 F3 "" 0 0 60 H V C CNN
 DRAW
 C 100 0 25 0 1 0 N
-X 1 1 0 0 100 R 0 0 1 1 B
+X 1 1 0 0 100 R 0 0 1 1 P
 ENDDRAW
 ENDDEF
 #

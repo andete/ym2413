@@ -30,8 +30,8 @@ SILABS := silabs
 # it is required only to install the USB bootloader
 EACOMMANDER := /home/joost/prj/silabs/eACommander/start-eACommander.sh
 
-# LINKER_FILE := $(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld 
-LINKER_FILE := efm32gg-bootloader.ld 
+LINKER_FILE := $(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld 
+#LINKER_FILE := efm32gg-bootloader.ld 
 
 # settings for xmodem based transfer
 SERIAL := /dev/ttyACM3
@@ -238,9 +238,12 @@ ifneq (clean,$(findstring clean, $(MAKECMDGOALS)))
 -include $(C_DEPS)
 endif
 
-# TODO find a way to script this
+# xmodem upload is not a success so far
+# upload: exe/$(PROJECTNAME).bin
+# 	python efm32-upload.py $< $(SERIAL)
+
 upload: exe/$(PROJECTNAME).bin
-	python $(XMODEMPY) send $< $(SERIAL)
+	$(EACOMMANDER) --flash $< -r
 
 install-bootloader: bootldld.bin
 	$(EACOMMANDER) --flash $< -r

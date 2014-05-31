@@ -57,6 +57,7 @@ int main(int argc, char ** argv) {
   usbcdc::print("Hello, world  \r\n");
 
   while (true) {
+    led::demo();
   }
   return 0;
 }

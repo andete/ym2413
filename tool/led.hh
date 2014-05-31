@@ -33,4 +33,21 @@ namespace led {
     GPIO_PinOutClear(pins[led].port, pins[led].pin);
   }
 
+  static inline void toggle(const uint8_t led) {
+    GPIO_PinOutToggle(pins[led].port, pins[led].pin);
+  }
+
+  static void demo() {
+    for (int j = 1; j < 100; ++j) {
+      tick::delay(100);
+      led::off((j-1) % 10);
+      led::on(j % 10);
+    }
+    for (int j = 100; j > 0; --j) {
+      tick::delay(100);
+      led::off((j+1) % 10);
+      led::on(j % 10);
+    }
+  }
+
 }

@@ -26,6 +26,38 @@
 #include "led.hh"
 #include "usbcdc.hh"
 #include "ym.hh"
+#include "board.hh" // TEMP HACK
+
+void waitCycles(int n) {
+  tick::delay(n/10);
+}
+
+void writeRegister(int reg, int value) {
+	static const int EXTRA = 10; // more time between writes than strictly required
+
+	setData(reg);
+	setAddr(0);
+	setWE(0);
+	waitCycles(1);
+	setCS(0);
+	waitCycles(1);
+	setCS(1);
+	setWE(1);
+
+	waitCycles(12-1-1 + EXTRA);
+	
+	setData(value);
+	setAddr(1);
+	setWE(0);
+	waitCycles(1);
+	setCS(0);
+	waitCycles(1);
+	setCS(1);
+	setWE(1);
+	
+	waitCycles(84-1-1 + EXTRA);
+}
+
 
 static void setup() {
 
@@ -54,7 +86,17 @@ int main(int argc, char ** argv) {
   setup();
 
   tick::delay(100);
+  led::demo();
   usbcdc::print("Hello, world  \r\n");
+
+  //while (true) {
+	  writeRegister(16, 171); // frequency (8 lower bits)
+	  writeRegister(48,  64); // select instrument (piano), volume (maximum)
+	                        // alternatives: 16 -> violin, 32 -> guitar
+	                        //               48 -> piano, 64->flute, ...
+	  writeRegister(32,  28); // write frequency (upper 4 bits), set key-on
+  //  tick::delay(1000);
+  //}
 
   while (true) {
     led::demo();

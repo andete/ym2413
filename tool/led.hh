@@ -39,12 +39,12 @@ namespace led {
 
   static void demo() {
     for (int j = 1; j < 100; ++j) {
-      tick::delay(100);
+      tick::delay(50+j/2);
       led::off((j-1) % 10);
       led::on(j % 10);
     }
     for (int j = 100; j > 0; --j) {
-      tick::delay(100);
+      tick::delay(50+j/2);
       led::off((j+1) % 10);
       led::on(j % 10);
     }

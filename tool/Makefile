@@ -33,6 +33,8 @@ EACOMMANDER := /home/joost/prj/silabs/eACommander/start-eACommander.sh
 LINKER_FILE := $(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld 
 #LINKER_FILE := efm32gg-bootloader.ld 
 
+USBTIMER := USB_TIMER1
+
 # settings for xmodem based transfer
 SERIAL := /dev/ttyACM3
 XMODEMPY := xmodem.py
@@ -102,7 +104,7 @@ DEPFLAGS = -MMD -MP -MF $(@:.o=.d)
 #
 # Add -Wa,-ahld=$(LST_DIR)/$(@F:.o=.lst) to CFLAGS to produce assembly list files
 #
-override CFLAGS += -D$(DEVICE) -Wall -Wextra -mcpu=cortex-m3 -mthumb \
+override CFLAGS += -D$(DEVICE) -DUSB_TIMER=$(USBTIMER) -Wall -Wextra -mcpu=cortex-m3 -mthumb \
 -mfix-cortex-m3-ldrd -ffunction-sections -fdata-sections -fomit-frame-pointer \
 -DDEBUG_EFM_USER  $(DEPFLAGS)
 

@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (2014-06-26 BZR 4956)-product   date = Tue 01 Jul 2014 08:01:52 PM CEST
+Cmp-Mod V01 Created by Cvpcb (2014-06-26 BZR 4956)-product   date = Sun 13 Jul 2014 05:19:33 PM CEST
 
 BeginCmp
 TimeStamp = /52F426B6;
@@ -85,20 +85,6 @@ IdModule  = pretty:1206;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F72FE5;
-Reference = C13;
-ValeurCmp = 10uF;
-IdModule  = pretty:1206;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F72FF2;
-Reference = C14;
-ValeurCmp = 10uF;
-IdModule  = pretty:1206;
-EndCmp
-
-BeginCmp
 TimeStamp = /52E3A60D;
 Reference = C15;
 ValeurCmp = 20pF/NC;
@@ -117,48 +103,6 @@ TimeStamp = /52F41EE9;
 Reference = C17;
 ValeurCmp = 100nF;
 IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AD52;
-Reference = C18;
-ValeurCmp = 2.2nF;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AD71;
-Reference = C19;
-ValeurCmp = 2.2nF;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F73CC9;
-Reference = C20;
-ValeurCmp = 1uF;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74902;
-Reference = C21;
-ValeurCmp = 1uF;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7414F;
-Reference = C22;
-ValeurCmp = 10uF;
-IdModule  = pretty:1206;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74912;
-Reference = C23;
-ValeurCmp = 10uF;
-IdModule  = pretty:1206;
 EndCmp
 
 BeginCmp
@@ -246,13 +190,6 @@ IdModule  = pretty:0805_LED;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F758D1;
-Reference = D12;
-ValeurCmp = D;
-IdModule  = pretty:TAIW_SEM_DIODE;
-EndCmp
-
-BeginCmp
 TimeStamp = /52F49380;
 Reference = J1;
 ValeurCmp = MICRO-USB-AB;
@@ -263,35 +200,35 @@ BeginCmp
 TimeStamp = /52F79313;
 Reference = JP1;
 ValeurCmp = SJ;
-IdModule  = pretty:Solder_Jumper_2mm;
+IdModule  = pretty:Solder_Jumper_1.5mm;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F78C85;
 Reference = JP2;
 ValeurCmp = SJ;
-IdModule  = pretty:Solder_Jumper_2mm;
+IdModule  = pretty:Solder_Jumper_1.5mm;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F78C8B;
 Reference = JP3;
 ValeurCmp = SJ;
-IdModule  = pretty:Solder_Jumper_2mm;
+IdModule  = pretty:Solder_Jumper_1.5mm;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3A589;
 Reference = JP4;
 ValeurCmp = SJ;
-IdModule  = pretty:Solder_Jumper_2mm;
+IdModule  = pretty:Solder_Jumper_1.5mm;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3A596;
 Reference = JP5;
 ValeurCmp = SJ;
-IdModule  = pretty:Solder_Jumper_2mm;
+IdModule  = pretty:Solder_Jumper_1.5mm;
 EndCmp
 
 BeginCmp
@@ -299,13 +236,6 @@ TimeStamp = /52F821B5;
 Reference = K1;
 ValeurCmp = CONN_3;
 IdModule  = pretty:PIN_1X3;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7A1A7;
-Reference = K2;
-ValeurCmp = CONN_3;
-IdModule  = pretty:SPC-FD05-3.5mm-stereo-phone-jack;
 EndCmp
 
 BeginCmp
@@ -365,10 +295,10 @@ IdModule  = pretty:Test_Pad_1mm;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F74BDD;
+TimeStamp = /53C2A362;
 Reference = P5;
-ValeurCmp = MIDI-IN;
-IdModule  = pretty:spiratronics-DIN5-midi;
+ValeurCmp = CONN_6;
+IdModule  = pretty:PIN_1X6_S;
 EndCmp
 
 BeginCmp
@@ -547,31 +477,10 @@ IdModule  = pretty:PIN_2X3_ALT_S;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F72DE8;
+TimeStamp = /53C2AB8E;
 Reference = P31;
-ValeurCmp = CONN_2;
-IdModule  = pretty:PIN_1X2_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F72DF5;
-Reference = P32;
-ValeurCmp = CONN_2;
-IdModule  = pretty:PIN_1X2_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F828AD;
-Reference = P33;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F828B3;
-Reference = P34;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
+ValeurCmp = CONN_7;
+IdModule  = pretty:PIN_1X7_S;
 EndCmp
 
 BeginCmp
@@ -599,350 +508,245 @@ BeginCmp
 TimeStamp = /52F7EA36;
 Reference = R1;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EEB7;
 Reference = R2;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EECC;
 Reference = R3;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EEE1;
 Reference = R4;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EEF6;
 Reference = R5;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF0B;
 Reference = R6;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF20;
 Reference = R7;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF35;
 Reference = R8;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF4A;
 Reference = R9;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF65;
 Reference = R10;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F42C49;
 Reference = R11;
 ValeurCmp = 1;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F4AAA8;
 Reference = R12;
 ValeurCmp = 15;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7EF7A;
 Reference = R13;
 ValeurCmp = 3k3;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F4AAB5;
 Reference = R14;
 ValeurCmp = 15;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F74BF4;
+TimeStamp = /53C2AF20;
 Reference = R15;
-ValeurCmp = 220;
-IdModule  = pretty:0603_S;
+ValeurCmp = 2k2;
+IdModule  = pretty:0603_S_R;
+EndCmp
+
+BeginCmp
+TimeStamp = /53C2AB64;
+Reference = R16;
+ValeurCmp = 2k2;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6C9;
 Reference = R17;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6D5;
 Reference = R18;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6E1;
 Reference = R19;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6ED;
 Reference = R20;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B649;
 Reference = R21;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6CF;
 Reference = R22;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6DB;
 Reference = R23;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3B6E7;
 Reference = R24;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7C7E4;
 Reference = R25;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7C7EA;
 Reference = R26;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F7C7F0;
 Reference = R27;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3BCBE;
 Reference = R28;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3A3F5;
 Reference = R31;
 ValeurCmp = 100k;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3BD6F;
 Reference = R32;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3BD75;
 Reference = R34;
 ValeurCmp = 22;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3A402;
 Reference = R35;
 ValeurCmp = 100k;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52E3A4DB;
 Reference = R36;
 ValeurCmp = 100k/NC;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F731EC;
-Reference = R37;
-ValeurCmp = 10k;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F41D93;
 Reference = R38;
 ValeurCmp = 100;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F731F9;
-Reference = R39;
-ValeurCmp = 10k;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AC6B;
-Reference = R40;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AC84;
-Reference = R41;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
 TimeStamp = /52F79A18;
 Reference = R42;
 ValeurCmp = 100;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3B3BC;
-Reference = R43;
-ValeurCmp = 4k7/NC;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3B3AF;
-Reference = R44;
-ValeurCmp = 4k7/NC;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AE4A;
-Reference = R45;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3AE50;
-Reference = R46;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3B049;
-Reference = R47;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7426C;
-Reference = R48;
-ValeurCmp = 100;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74919;
-Reference = R49;
-ValeurCmp = 100;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52E3B04F;
-Reference = R50;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74285;
-Reference = R51;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7491F;
-Reference = R52;
-ValeurCmp = 2k2;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74297;
-Reference = R53;
-ValeurCmp = 1k;
-IdModule  = pretty:0603_S;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F74925;
-Reference = R54;
-ValeurCmp = 1k;
-IdModule  = pretty:0603_S;
+IdModule  = pretty:0603_S_R;
 EndCmp
 
 BeginCmp
@@ -985,27 +789,6 @@ TimeStamp = /52E3A135;
 Reference = U4;
 ValeurCmp = YM2413;
 IdModule  = pretty:DIL18;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F72FCC;
-Reference = U5;
-ValeurCmp = LM386;
-IdModule  = pretty:ATMEL_SO8;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F748ED;
-Reference = U6;
-ValeurCmp = LM386;
-IdModule  = pretty:ATMEL_SO8;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F8C674;
-Reference = U7;
-ValeurCmp = ACPL-M21L;
-IdModule  = pretty:SO-5;
 EndCmp
 
 BeginCmp

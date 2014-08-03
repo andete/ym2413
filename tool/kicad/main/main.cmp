@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by Cvpcb (2014-06-26 BZR 4956)-product   date = Sun 13 Jul 2014 05:19:33 PM CEST
+Cmp-Mod V01 Created by Cvpcb (2014-06-26 BZR 4956)-product   date = Sun 03 Aug 2014 11:35:00 AM CEST
 
 BeginCmp
 TimeStamp = /52F426B6;
@@ -193,7 +193,7 @@ BeginCmp
 TimeStamp = /52F49380;
 Reference = J1;
 ValeurCmp = MICRO-USB-AB;
-IdModule  = pretty:USB-MICRO-AB-Molex-47590-0001;
+IdModule  = pretty:USB-MICRO-B-FCI-10103593-0001LF;
 EndCmp
 
 BeginCmp
@@ -267,34 +267,6 @@ IdModule  = pretty:1206;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F821A7;
-Reference = P1;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F821AD;
-Reference = P2;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F81E51;
-Reference = P3;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F81E57;
-Reference = P4;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
 TimeStamp = /53C2A362;
 Reference = P5;
 ValeurCmp = CONN_6;
@@ -302,148 +274,8 @@ IdModule  = pretty:PIN_1X6_S;
 EndCmp
 
 BeginCmp
-TimeStamp = /52F7F694;
-Reference = P6;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F68E;
-Reference = P7;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F688;
-Reference = P8;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F682;
-Reference = P9;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
 TimeStamp = /52F81E4B;
 Reference = P10;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F67C;
-Reference = P11;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F801C6;
-Reference = P12;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F66F;
-Reference = P13;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F801C0;
-Reference = P14;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F7F660;
-Reference = P15;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F801BA;
-Reference = P16;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F801B4;
-Reference = P17;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80BF6;
-Reference = P18;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80BFC;
-Reference = P19;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C02;
-Reference = P20;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C08;
-Reference = P21;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C0E;
-Reference = P22;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C14;
-Reference = P23;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C1A;
-Reference = P24;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C20;
-Reference = P25;
-ValeurCmp = TEST_POINT;
-IdModule  = pretty:Test_Pad_1mm;
-EndCmp
-
-BeginCmp
-TimeStamp = /52F80C26;
-Reference = P26;
 ValeurCmp = TEST_POINT;
 IdModule  = pretty:Test_Pad_1mm;
 EndCmp

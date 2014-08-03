@@ -704,4 +704,23 @@ F 3 "" H 6100 1700 60  0000 C CNN
 	1    6100 1700
 	1    0    0    -1  
 $EndComp
+$Comp
+L +5V #PWR018
+U 1 1 53DE12BC
+P 5600 2500
+F 0 "#PWR018" H 5600 2590 20  0001 C CNN
+F 1 "+5V" H 5600 2590 30  0000 C CNN
+F 2 "" H 5600 2500 60  0000 C CNN
+F 3 "" H 5600 2500 60  0000 C CNN
+	1    5600 2500
+	0    -1   -1   0   
+$EndComp
+Text Label 2450 2500 0    60   ~ 0
+MOA
+Text Label 2500 4450 0    60   ~ 0
+ROA
+Text Label 3600 2650 0    60   ~ 0
+MOO
+Text Label 3650 4600 0    60   ~ 0
+ROO
 $EndSCHEMATC

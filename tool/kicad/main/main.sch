@@ -778,9 +778,9 @@ F 3 "" H 2850 7050 60  0000 C CNN
 	1    2850 7050
 	1    0    0    -1  
 $EndComp
-Text Label 4050 6500 1    60   ~ 0
+Text Label 4050 6300 1    60   ~ 0
 D-
-Text Label 3950 6500 1    60   ~ 0
+Text Label 3950 6300 1    60   ~ 0
 D+
 $Comp
 L L L3
@@ -806,9 +806,9 @@ F 3 "" H 3300 6350 60  0000 C CNN
 $EndComp
 Text Label 1850 6400 0    60   ~ 0
 VBUS_IN
-Text Label 2150 6750 0    60   ~ 0
-D-_IN
 Text Label 2150 6650 0    60   ~ 0
+D-_IN
+Text Label 2150 6750 0    60   ~ 0
 D+_IN
 Text Label 1650 7050 1    60   ~ 0
 G_I1
@@ -836,9 +836,9 @@ F 3 "" H 3500 6750 60  0000 C CNN
 	1    3500 6750
 	1    0    0    -1  
 $EndComp
-Text Label 3150 6750 0    60   ~ 0
-D-B
 Text Label 3150 6650 0    60   ~ 0
+D-B
+Text Label 3150 6750 0    60   ~ 0
 D+B
 $Comp
 L +5V #PWR020
@@ -1132,7 +1132,7 @@ Wire Wire Line
 Wire Wire Line
 	1250 7050 1250 7100
 Wire Wire Line
-	1250 7100 1450 7100
+	1250 7100 1500 7100
 Connection ~ 1350 7100
 Wire Wire Line
 	1450 7100 1450 7050
@@ -1953,17 +1953,7 @@ Wire Wire Line
 Wire Wire Line
 	2850 7000 2850 7050
 Wire Wire Line
-	3550 6750 4050 6750
-Wire Wire Line
-	2450 6650 2050 6650
-Wire Wire Line
-	2050 6650 2050 6700
-Wire Wire Line
-	2050 6700 1600 6700
-Wire Wire Line
-	1600 6650 1950 6650
-Wire Wire Line
-	1950 6650 1950 6750
+	1600 6650 2450 6650
 Wire Wire Line
 	1950 6750 2450 6750
 $Comp
@@ -2262,11 +2252,7 @@ NoConn ~ 2850 4850
 NoConn ~ 2850 4950
 NoConn ~ 2850 5050
 Wire Wire Line
-	3450 6650 3950 6650
-Wire Wire Line
-	3950 6650 3950 5600
-Wire Wire Line
-	4050 6750 4050 5600
+	3450 6650 4050 6650
 $Comp
 L CONN_6 P5
 U 1 1 53C2A362
@@ -2459,4 +2445,17 @@ NoConn ~ 4700 5600
 NoConn ~ 4600 5600
 NoConn ~ 5100 5000
 NoConn ~ 4050 3100
+Wire Wire Line
+	1950 6750 1950 6700
+Wire Wire Line
+	1950 6700 1600 6700
+Wire Wire Line
+	4050 6650 4050 5600
+Wire Wire Line
+	3950 5600 3950 6750
+Wire Wire Line
+	3950 6750 3550 6750
+Wire Wire Line
+	1500 7100 1500 7050
+Connection ~ 1450 7100
 $EndSCHEMATC

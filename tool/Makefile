@@ -245,12 +245,16 @@ upload: exe/$(PROJECTNAME).bin
 
 # upload via xmodem
 xmodem: exe/$(PROJECTNAME).bin
+	# open serial device
 	screen -d -m -S 'serial' $(SERIAL) 115200
 	sleep 0.1
+	# say we want to Upload
 	screen -x "serial" -X eval '!!!| echo u'
 	sleep 0.1
+	# execute xmodem transfer
 	screen -x "serial" -X eval "exec !! sx -vv $<"
 	sleep 2
+	# say we want to Boot the installed firmware
 	screen -x "serial" -X eval '!!!| echo b'
 
 install-bootloader: usb_uart_bootloader-rom.bin

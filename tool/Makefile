@@ -252,7 +252,7 @@ xmodem: exe/$(PROJECTNAME).bin
 	screen -x "serial" -X eval '!!!| echo u'
 	sleep 0.1
 	# execute xmodem transfer
-	screen -x "serial" -X eval "exec !! sx -vv $<"
+	screen -x "serial" -X eval 'exec !! sx -vv $<'
 	sleep 2
 	# say we want to Boot the installed firmware
 	screen -x "serial" -X eval '!!!| echo b'

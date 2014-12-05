@@ -36,7 +36,7 @@ LINKER_FILE := efm32gg_bootld.ld
 USBTIMER := USB_TIMER1
 
 # settings for xmodem based transfer
-SERIAL := /dev/ttyACM4
+SERIAL := /dev/ttyACM0
 
 RMDIRS     := rm -rf
 RMFILES    := rm -rf

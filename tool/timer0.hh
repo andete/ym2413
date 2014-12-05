@@ -40,7 +40,7 @@ namespace timer0 {
 
     // TODO: actual timer setup to create our signal
     // Set Top Value
-    const uint32_t PWM_FREQ = 3*1000*1000/10; // 3 Mhz
+    const uint32_t PWM_FREQ = 3*1000*1000/10; // 3 Mhz divided by 10
     const uint32_t topValue = CMU_ClockFreqGet(cmuClock_HFPER)/PWM_FREQ;
     TIMER_TopSet(TIMER0, topValue);
 

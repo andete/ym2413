@@ -15,7 +15,6 @@
 #include "timer0.hh"
 #include "usbcdc.hh"
 #include "ym.hh"
-#include "board.hh" // TEMP HACK
 
 void waitCycles(int n)
 {
@@ -25,34 +24,34 @@ void waitCycles(int n)
 
 void resetYm2413()
 {
-	setIC(0);        // activate reset
+	ym::setIC(0);        // activate reset
 	waitCycles(200); // keep for 200 cycles (should be at least 80)
-	setIC(1);        // deactive reset
+	ym::setIC(1);        // deactive reset
 	waitCycles(200);
 }
 
-void writeRegister(int reg, int value) {
+void writeRegister(uint8_t reg, uint8_t value) {
 	static const int EXTRA = 10; // more time between writes than strictly required
 
-	setData(reg);
-	setAddr(0);
-	setWE(0);
+	ym::setData(reg);
+	ym::setAddr(0);
+	ym::setWE(0);
 	waitCycles(1);
-	setCS(0);
+	ym::setCS(0);
 	waitCycles(1);
-	setCS(1);
-	setWE(1);
+	ym::setCS(1);
+	ym::setWE(1);
 
 	waitCycles(12-1-1 + EXTRA);
 	
-	setData(value);
-	setAddr(1);
-	setWE(0);
+	ym::setData(value);
+	ym::setAddr(1);
+	ym::setWE(0);
 	waitCycles(1);
-	setCS(0);
+	ym::setCS(0);
 	waitCycles(1);
-	setCS(1);
-	setWE(1);
+	ym::setCS(1);
+	ym::setWE(1);
 	
 	waitCycles(84-1-1 + EXTRA);
 }
@@ -82,19 +81,35 @@ int main()
 	setup();
 
 	tick::delay(100);
+	adc0::start();
 
 	resetYm2413();
-	writeRegister(16, 171); // frequency (8 lower bits)
-	writeRegister(48,  64); // select instrument (piano), volume (maximum)
-	// alternatives: 16 -> violin, 32 -> guitar
-	//               48 -> piano, 64->flute, ...
-	writeRegister(32,  28); // write frequency (upper 4 bits), set key-on
+	// setup custom instrument
+	writeRegister(0, 0x20);
+	writeRegister(1, 0x23);
+	writeRegister(2, 0x3f);
+	writeRegister(3, 0x00);
+	writeRegister(4, 0xff);
+	writeRegister(5, 0xff);
+	writeRegister(6, 0x0f);
+	writeRegister(7, 0x0f);
+
+	writeRegister(0x10,  171); // frequency (8 lower bits)
+	writeRegister(0x30, 0x00); // select custom instrument, maximum volume
+	writeRegister(0x20,   28); // write frequency (upper 4 bits), set key-on
 
 	while (true) {
 		led::demo();
-		tick::delay(2000);
-		usbcdc::print("Hello, world 2\r\n");
-		tick::delay(2000);
+		//tick::delay(2000);
+		//usbcdc::print("Hello, world 2\r\n");
+		//tick::delay(2000);
+
+		static const int N = 10000;
+		uint16_t buffer[N] __attribute__((aligned(4)));
+		for (int i = 0; i < N; ++i) {
+			buffer[i] = adc0::getValue();
+		}
+		usbcdc::write(buffer, sizeof(buffer));
 	}
 	return 0;
 }

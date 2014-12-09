@@ -11,7 +11,7 @@ void setup();
 
 // data _must_ be 4-byte aligned!
 // data needs to be accessable after this call returns!
-void write(const uint8_t* data, uint16_t len);
+void write(const void* data, uint16_t len);
 
 // data _must_ be 4-byte aligned!
 // data needs to be accessable after this call returns!

@@ -498,9 +498,9 @@ static int line_coding_received(USB_Status_TypeDef status,
 
 // data _must_ be 4-byte aligned!
 // data needs to be accessable after this call returns!
-void write(const uint8_t* data, uint16_t len)
+void write(const void* data, uint16_t len)
 {
-	USBD_Write(EP_DATA_IN, const_cast<uint8_t*>(data), len, data_transmitted);
+	USBD_Write(EP_DATA_IN, const_cast<void*>(data), len, data_transmitted);
 }
 
 // data _must_ be 4-byte aligned!
@@ -510,7 +510,7 @@ void write(const uint8_t* data, uint16_t len)
 void print(const char* str)
 {
 	const uint16_t len = strnlen(str, 128);
-	write(reinterpret_cast<const uint8_t*>(str), len);
+	write(str, len);
 }
 
 } // namespace usbcdc

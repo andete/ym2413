@@ -80,17 +80,26 @@ void setup()
 	TIMER_Init(TIMER0, &timerInit);
 }
 
+void busyWaitN(uint32_t cycles)
+{
+	uint32_t half = TIMER_TopGet(TIMER0) / 2;
+	while (cycles--) {
+		// wait till we're in the 2nd half
+		while (TIMER_CounterGet(TIMER0) < half) {}
+		// wait till we're in the 1st half again
+		while (TIMER_CounterGet(TIMER0) >= half) {}
+	}
+}
+
 } // namespace timer0
 
 void TIMER0_IRQHandler()
 {
-	uint32_t compareValue;
-
-	/* Clear flag for TIMER0 overflow interrupt */
+	// Clear flag for TIMER0 overflow interrupt
 	TIMER_IntClear(TIMER0, TIMER_IF_OF);
 
-	compareValue = TIMER_CaptureGet(TIMER0, 0);
-	/* increment duty-cycle or reset if reached TOP value */
+	uint32_t compareValue = TIMER_CaptureGet(TIMER0, 0);
+	// increment duty-cycle or reset if reached TOP value
 	if (compareValue == TIMER_TopGet(TIMER0)) {
 		TIMER_CompareBufSet(TIMER0, 0, 0);
 	} else {

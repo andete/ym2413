@@ -19,7 +19,7 @@ LedInfo pins[NUM] =
 
 void setup()
 {
-	for (int i = 0; i < NUM; ++i) {
+	for (unsigned i = 0; i < NUM; ++i) {
 		GPIO_PinModeSet(pins[i].port, pins[i].pin, gpioModePushPull, 0);
 	}
 	// maybe do a funky blink pattern on startup

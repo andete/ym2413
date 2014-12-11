@@ -29,13 +29,22 @@ void demo()
 {
 	for (int j = 1; j < 100; ++j) {
 		tick::delay(50 + j / 2);
-		led::off((j - 1) % NUM);
-		led::on ( j      % NUM);
+		off((j - 1) % NUM);
+		on ( j      % NUM);
 	}
 	for (int j = 100; j > 0; --j) {
 		tick::delay(50 + j / 2);
-		led::off((j + 1) % NUM);
-		led::on ( j      % NUM);
+		off((j + 1) % NUM);
+		on ( j      % NUM);
+	}
+}
+void short_demo()
+{
+	for (int i = 0; i < 10; ++i) off(i);
+	for (int i = 0; i < 10; ++i) {
+		on(i);
+		tick::delay(150);
+		off(i);
 	}
 }
 

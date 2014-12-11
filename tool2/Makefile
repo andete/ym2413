@@ -146,6 +146,7 @@ $(SILABS)/emlib/src/em_emu.c \
 $(SILABS)/emlib/src/em_ebi.c \
 $(SILABS)/emlib/src/em_gpio.c \
 $(SILABS)/emlib/src/em_int.c \
+$(SILABS)/emlib/src/em_prs.c \
 $(SILABS)/emlib/src/em_rtc.c \
 $(SILABS)/emlib/src/em_system.c \
 $(SILABS)/emlib/src/em_leuart.c \
@@ -245,6 +246,7 @@ upload: exe/$(PROJECTNAME).bin
 	$(EACOMMANDER) --flash $< -r
 
 # upload via xmodem
+xmodem: CFLAGS += -DNDEBUG -O3 -g
 xmodem: exe/$(PROJECTNAME).bin
 	# open serial device
 	screen -d -m -S 'serial' $(SERIAL) 115200

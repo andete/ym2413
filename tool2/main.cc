@@ -2,6 +2,7 @@
 #include "em_chip.h"
 //#include "em_device.h"
 //#include "em_int.h"
+#include "em_timer.h"
 
 // own code
 #include "dma.hh"
@@ -58,7 +59,7 @@ int main()
 	ym::writeReg(0x20,   28); // write frequency (upper 4 bits), set key-on
 
 	while (true) {
-		led::demo();
+		led::short_demo();
 		//tick::delay(2000);
 		//usbcdc::print("Hello, world 2\r\n");
 		//tick::delay(2000);
@@ -67,6 +68,8 @@ int main()
 		uint16_t buffer[N] __attribute__((aligned(4)));
 		for (int i = 0; i < N; ++i) {
 			buffer[i] = adc0::getValue();
+			//buffer[i + 1] = TIMER_CounterGet(TIMER0);
+			//buffer[i + 1] = TIMER_CounterGet(TIMER1);
 		}
 		usbcdc::write(buffer, sizeof(buffer));
 	}

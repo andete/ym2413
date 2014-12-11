@@ -33,8 +33,12 @@ void setup()
 	// Enable clock for LEUART0
 	CMU_ClockEnable(cmuClock_LEUART0, true);
 
-	// Enable clock for TIMER0
+	// Enable clock for TIMER0,1
 	CMU_ClockEnable(cmuClock_TIMER0, true);
+	CMU_ClockEnable(cmuClock_TIMER1, true);
+
+	// Enable clock for PRS (peripheral reflex system)
+	CMU_ClockEnable(cmuClock_PRS, true);
 }
 
 } // namespace clock

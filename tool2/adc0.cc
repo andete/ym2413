@@ -7,12 +7,11 @@ namespace adc0 {
 void setup()
 {
 
-	// Route timer 0 to PRS channel 5
-	// TODO connect to timer1 instead
+	// Route timer 1 to PRS channel 5
 	PRS_SourceSignalSet(
 		5,                             // channel 5
-		PRS_CH_CTRL_SOURCESEL_TIMER0,  // timer 0
-		PRS_CH_CTRL_SIGSEL_TIMER0OF,   // overflow
+		PRS_CH_CTRL_SOURCESEL_TIMER1,  // timer 1
+		PRS_CH_CTRL_SIGSEL_TIMER1OF,   // overflow
 		prsEdgeOff);                   // leave signal as is.
 
 	ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
@@ -29,8 +28,8 @@ void setup()
 	init_single.acqTime    = adcAcqTime1;  // 1 cycle
 	init_single.reference  = adcRefVDD;    // Buffered VDD reference
 	init_single.resolution = adcRes12Bit;  // 12 bit
-	init_single.input      = adcSingleInpCh1; // MO
-	init_single.diff       = false;
+	init_single.input      = adcSingleInpCh0Ch1; // MO
+	init_single.diff       = true;
 	init_single.prsEnable  = true;         // use PRS
 	init_single.leftAdjust = false;
 	init_single.rep        = false;        // wait for next PRS event

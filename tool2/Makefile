@@ -33,7 +33,7 @@ EACOMMANDER := /home/joost/prj/silabs/eACommander/start-eACommander.sh
 #LINKER_FILE := $(SILABS)/Device/EnergyMicro/EFM32GG/Source/GCC/efm32gg.ld 
 LINKER_FILE := efm32gg_bootld.ld
 
-USBTIMER := USB_TIMER1
+USBTIMER := USB_TIMER3
 
 # settings for xmodem based transfer
 SERIAL := /dev/ttyACM0
@@ -192,8 +192,8 @@ vpath %.c $(C_PATHS)
 vpath %.s $(S_PATHS)
 vpath %.S $(S_PATHS)
 
-# Default build is debug build
-all:      debug
+# Default build is release build
+all:      release
 
 debug:    CFLAGS += -DDEBUG -O0 -g
 debug:    $(EXE_DIR)/$(PROJECTNAME).bin

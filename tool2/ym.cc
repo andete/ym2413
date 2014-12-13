@@ -73,9 +73,8 @@ void reset()
 {
 	//      data, a0, we,    cs,    ic
 	setPins(0,    0,  false, false, true ); // activate IC
-	timer0::busyWaitN(200);                    // keep for 200 cycles (should be at least 80)
+	timer0::busyWaitN(200);                 // keep for 200 cycles (should be at least 80)
 	setPins(0,    0,  false, false, false); // deactivate IC
-	timer0::busyWaitN(200);
 }
 
 void writeReg(uint8_t reg, uint8_t value)

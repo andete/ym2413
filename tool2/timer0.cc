@@ -9,6 +9,15 @@ void setup()
 {
 	// Enable clock for TIMER0
 	CMU_ClockEnable(cmuClock_TIMER0, true);
+	CMU_ClockEnable(cmuClock_TIMER1, true);
+
+	// Timer-1, chained to timer-0, overflows every 72 YM2413 ticks
+	TIMER_Init_TypeDef timer1Init = TIMER_INIT_DEFAULT;
+	timer1Init.clkSel = timerClkSelCascade; // chain to timer-0
+	timer1Init.enable = false; // don't start yet
+	timer1Init.sync = true;    // start when timer-0 starts
+	TIMER_TopSet(TIMER1, 72-1);
+	TIMER_Init(TIMER1, &timer1Init);
 
 	// TODO
 	// Pin PA0 is configured to Input enabled
@@ -52,23 +61,6 @@ void setup()
 
 	// TODO
 	// Select timer parameters
-	TIMER_Init_TypeDef timer1Init = {
-		.enable     = false,
-		.debugRun   = true, // Keep counter during debug halt
-		.prescale   = timerPrescale1, // no pre-scaling
-		.clkSel     = timerClkSelCascade, // chain to timer-0
-		.count2x    = false, // double count mode
-		.ati        = false, //
-		.fallAction = timerInputActionNone, // no action
-		.riseAction = timerInputActionNone, // no action
-		.mode       = timerModeUp, // count up
-		.dmaClrAct  = false, // no dma involved
-		.quadModeX4 = false, // no quadrature mode
-		.oneShot    = false, // keep running
-		.sync       = true,  // start running when timer0 starts
-	};
-	TIMER_TopSet(TIMER1, 2-1);
-
 	TIMER_Init_TypeDef timer0Init = {
 		.enable     = true,
 		.debugRun   = true, // Keep counter during debug halt
@@ -94,7 +86,6 @@ void setup()
 	//NVIC_EnableIRQ(TIMER0_IRQn);
 
 	// Configure timer
-	TIMER_Init(TIMER1, &timer1Init);
 	TIMER_Init(TIMER0, &timer0Init);
 }
 

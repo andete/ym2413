@@ -44,6 +44,10 @@ int main()
 	adc0::start();
 
 	ym::reset();
+	// tune to capture YM2413 channel 0
+	TIMER_CounterSet(TIMER0,  0);
+	TIMER_CounterSet(TIMER1, 20);
+
 	// setup custom instrument
 	ym::writeReg(0, 0x20);
 	ym::writeReg(1, 0x23);
@@ -54,9 +58,9 @@ int main()
 	ym::writeReg(6, 0x0f);
 	ym::writeReg(7, 0x0f);
 
-	ym::writeReg(0x10,  171); // frequency (8 lower bits)
+	ym::writeReg(0x10, 0x61); // frequency (8 lower bits)
 	ym::writeReg(0x30, 0x00); // select custom instrument, maximum volume
-	ym::writeReg(0x20,   28); // write frequency (upper 4 bits), set key-on
+	ym::writeReg(0x20, 0x12); // write frequency (upper 4 bits), set key-on
 
 	while (true) {
 		led::short_demo();
@@ -64,14 +68,18 @@ int main()
 		//usbcdc::print("Hello, world 2\r\n");
 		//tick::delay(2000);
 
-		static const int N = 10000;
-		uint16_t buffer[N] __attribute__((aligned(4)));
-		for (int i = 0; i < N; ++i) {
-			buffer[i] = adc0::getValue();
-			//buffer[i + 1] = TIMER_CounterGet(TIMER0);
-			//buffer[i + 1] = TIMER_CounterGet(TIMER1);
-		}
-		usbcdc::write(buffer, sizeof(buffer));
+		//for (int j = 0; j < 72; ++j) {
+		//	TIMER_CounterSet(TIMER0, 0);
+		//	TIMER_CounterSet(TIMER1, j);
+			static const int N = 20000;
+			uint16_t buffer[N] __attribute__((aligned(4)));
+			for (int i = 0; i < N; ++i) {
+				buffer[i] = adc0::getValue();
+				//buffer[i + 1] = TIMER_CounterGet(TIMER1);
+			}
+		//	buffer[0] = j;
+			usbcdc::write(buffer, sizeof(buffer));
+		//}
 	}
 	return 0;
 }

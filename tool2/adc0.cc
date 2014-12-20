@@ -58,7 +58,10 @@ static void setupDMA()
 	descrCfg.hprot   = 0;
 	DMA_CfgDescr(dma::ADC0_CHANNEL, true,  &descrCfg);
 	DMA_CfgDescr(dma::ADC0_CHANNEL, false, &descrCfg);
+}
 
+void enableDMA()
+{
 	// enable ping-pong transfer
 	DMA_ActivatePingPong(
 		dma::ADC0_CHANNEL,          // channel
@@ -69,6 +72,12 @@ static void setupDMA()
 		(void*)buffer2,             // alternate dst
 		(void*)&(ADC0->SINGLEDATA), // alternate src
 		NUM_SAMPLES - 1);           //
+}
+
+void disableDMA()
+{
+	//DMA_ChannelEnable(dma::ADC0_CHANNEL, false);
+	DMA->CHENC = 1 << dma::ADC0_CHANNEL;
 }
 
 void setup()
@@ -95,15 +104,40 @@ void setup()
 	init_single.leftAdjust = false;
 	init_single.rep        = false;        // wait for next PRS event
 	ADC_InitSingle(ADC0, &init_single);
-
-	// Enable ADC single overflow interrupt to indicate lost samples.
-	ADC_IntEnable(ADC0, ADC_IEN_SINGLEOF);
-	NVIC_EnableIRQ(ADC0_IRQn);
 }
 
-void start()
+static void irqOnOverflow(bool enable)
+{
+	if (enable) {
+		// Enable ADC single overflow interrupt to indicate lost samples.
+		ADC_IntClear(ADC0, ADC_IFC_SINGLEOF);
+		ADC_IntEnable(ADC0, ADC_IEN_SINGLEOF);
+		NVIC_EnableIRQ(ADC0_IRQn);
+	} else {
+		ADC_IntDisable(ADC0, ADC_IEN_SINGLEOF);
+		NVIC_DisableIRQ(ADC0_IRQn);
+	}
+}
+
+void start0(bool irq)
+{
+	// Start ADC by routing the output of timer0 to the trigger of the ADC
+
+	irqOnOverflow(irq);
+
+	// Route timer 0 to PRS channel 5
+	PRS_SourceSignalSet(
+		5,                             // channel 5
+		PRS_CH_CTRL_SOURCESEL_TIMER0,  // timer0
+		PRS_CH_CTRL_SIGSEL_TIMER0OF,   // overflow
+		prsEdgeOff);                   // leave signal as is.
+}
+
+void start1(bool irq)
 {
 	// Start ADC by routing the output of timer1 to the trigger of the ADC
+
+	irqOnOverflow(irq);
 
 	// Route timer 1 to PRS channel 5
 	PRS_SourceSignalSet(
@@ -125,7 +159,7 @@ void stop()
 	//ADC_Reset(ADC0);
 }
 
-uint16_t getValue()
+uint16_t pollValue()
 {
 	// wait till data ready
 	while ((ADC0->STATUS & ADC_STATUS_SINGLEDV) == 0) {}

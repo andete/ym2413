@@ -1,8 +1,10 @@
-#include "ym.hh"
+#include "adc0.hh"
+#include "led.hh"
 #include "timer0.hh"
-//#include "em_cmu.h"
+#include "ym.hh"
 #include "em_gpio.h"
-//#include "em_timer.h"
+#include "em_timer.h"
+#include <cstdlib>
 
 namespace ym {
 
@@ -99,18 +101,93 @@ void writeReg(uint8_t reg, uint8_t value)
 	timer0::busyWaitN(84-1-1 + EXTRA);
 }
 
-/*void start_clock(uint32_t freq)
+void playSine(int volume, int freq)
 {
-	const uint32_t topValue = CMU_ClockFreqGet(cmuClock_HFPER) / freq;
-	TIMER_TopSet(TIMER0, topValue);
-	// 50 % duty cycle
-	TIMER_CompareSet(TIMER0, 0, topValue / 2);
-	TIMER_Enable(TIMER0, true);
+	// setup custom instrument
+	ym::writeReg(0, 0x20);
+	ym::writeReg(1, 0x23);
+	ym::writeReg(2, 0x3f);
+	ym::writeReg(3, 0x00);
+	ym::writeReg(4, 0xff);
+	ym::writeReg(5, 0xff);
+	ym::writeReg(6, 0x0f);
+	ym::writeReg(7, 0x0f);
+
+	ym::writeReg(0x10, freq & 0xff); // frequency (8 lower bits)
+	ym::writeReg(0x30, (0 << 16) | (volume & 0x0f)); // custom instrument / volume
+	ym::writeReg(0x20, 0x10 | ((freq >> 8) & 0x0f)); // key-on / frequency (upper 4 bits)
 }
 
-void stop_clock()
+
+// The YM2413 can output 9 music channels (or 6 + 5). The channels are output
+// in a pattern that repeats every 72 (YM2413) clock cycles. Timer0 ticks for
+// every YM2413 clock. Timer1 ticks 72 times slower, that allows to always
+// sample the same value in this pattern. Though we still need to select which
+// of the 72 clocks we want to sample. And that's what this routines does.
+//
+// We found out that the 72 cycles are divided in 18 slots of 4 cycles each
+// (actually this is also specified in the datasheet). For 3 of the 4 cycles
+// in a slot the RO or MO analog output pin has a non-zero value.
+//
+// This routine tries to setup timer1 so that it has value=0 when the middle
+// of the 3 samples of music channel 1 is output on MO.
+void syncTimer1()
 {
-	TIMER_Enable(TIMER0, false);
-}*/
+	playSine(0, 0x261); // max volume
+
+	adc0::disableDMA();
+	adc0::start0(false); // every YM2413 clock
+
+	while (true) {
+		led::short_demo();
+
+		int16_t  sample[72];
+		uint16_t timer [72];
+
+		// Capture 72 consecutive YM2413 samples,
+		// record the timer1 value for each.
+		for (int i = 0; i < 72; ++i) {
+			sample[i] = adc0::pollValue();
+			timer [i] = TIMER_CounterGet(TIMER1); // 0..71
+		}
+
+		// Search the location in the buffer where timer1 had the value 2.
+		int p = 0;
+		for (/**/; p < 72; ++p) {
+			if (timer[p] == 2) break;
+		}
+		// Once in a while the recorded timer values are off-by-one,
+		// don't crash when that happens for value=2.
+		if (p == 72) continue; // retry
+
+		// Starting from that location search the first non-zero
+		// (ignoring noise) in the sample data.
+		int i = 0;
+		for (/**/; i < 72; ++i) {
+			int s = abs(sample[p]);
+			if (s > 100) break; // well-above noise-level
+			++p; if (p == 72) p = 0; // circular add
+		}
+		// It's possible the signal is close to zero, in that case we
+		// won't find a clear peak in the signal and we try again
+		if (i == 72) continue; // retry
+
+		// The ym2413 signal lasts for 3 consecutive clocks, we
+		// searched for the first non-zero sample. Add one to go to the
+		// middle of the 3 samples.
+		++p; if (p == 72) p = 0; // circular add
+
+		// Look for the value of Timer1 at that middle sample. We
+		// want Timer1 to have the value zero at that time. So wait
+		// till timer1 has again that value and then reset it.
+		uint16_t c = timer[p];
+		while (TIMER_CounterGet(TIMER1) != c) {}
+		TIMER_CounterSet(TIMER1, 0);
+
+		// Done.
+		break;
+	}
+	adc0::stop();
+}
 
 } // namespace ym

@@ -16,6 +16,7 @@ extern LedInfo pins[NUM];
 void setup();
 void demo();
 void short_demo();
+void error(int err);
 
 inline void on(const uint8_t led)
 {

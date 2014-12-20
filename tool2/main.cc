@@ -3,6 +3,7 @@
 //#include "em_device.h"
 //#include "em_int.h"
 #include "em_timer.h"
+#include "em_adc.h"
 
 // own code
 #include "dma.hh"
@@ -41,7 +42,6 @@ int main()
 	setup();
 
 	tick::delay(100);
-	adc0::start();
 
 	ym::reset();
 	// tune to capture YM2413 channel 0
@@ -62,11 +62,12 @@ int main()
 	ym::writeReg(0x30, 0x00); // select custom instrument, maximum volume
 	ym::writeReg(0x20, 0x12); // write frequency (upper 4 bits), set key-on
 
-	while (true) {
-		led::short_demo();
-		//tick::delay(2000);
-		//usbcdc::print("Hello, world 2\r\n");
-		//tick::delay(2000);
+	//ADC_IntEnable(ADC0, ADC_IEN_SINGLEOF);
+	//NVIC_EnableIRQ(ADC0_IRQn);
+
+	/*while (true) {
+		//led::short_demo();
+		led::toggle(8);
 
 		//for (int j = 0; j < 72; ++j) {
 		//	TIMER_CounterSet(TIMER0, 0);
@@ -80,6 +81,24 @@ int main()
 		//	buffer[0] = j;
 			usbcdc::write(buffer, sizeof(buffer));
 		//}
+	}*/
+
+	adc0::start();
+	led::toggle(9);
+
+	while (true) {
+		led::toggle(8);
+
+		// TODO use ISR instead of polling
+		// wait till buffer full
+		int16_t* buf;
+		do {
+			buf = (int16_t*)adc0::fullBufferPtr;
+		} while (!buf);
+
+		usbcdc::write(buf, 1024 * 2);
+
+		adc0::fullBufferPtr = NULL;
 	}
 	return 0;
 }

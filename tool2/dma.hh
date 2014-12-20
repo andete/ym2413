@@ -7,6 +7,7 @@ namespace dma {
 
 // list the DMA channel numbers here
 static const int LEUART0_DMA_CHANNEL = 0;
+static const int ADC0_CHANNEL = 4;
 
 extern DMA_DESCRIPTOR_TypeDef control_block[DMA_CHAN_COUNT * 2];
 

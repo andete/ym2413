@@ -48,4 +48,20 @@ void short_demo()
 	}
 }
 
+void error(int err)
+{
+	for (int i = 0; i < 10; ++i) {
+		if (err & 1) {
+			on(i);
+		} else {
+			off(i);
+		}
+		err >>= 1;
+	}
+	while (1) {
+		toggle(9);
+		tick::delay(500);
+	}
+}
+
 } // namespace led

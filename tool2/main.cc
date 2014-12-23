@@ -1,9 +1,8 @@
 // efm32 specific headers
-#include "em_chip.h"
-//#include "em_device.h"
-//#include "em_int.h"
-#include "em_timer.h"
 #include "em_adc.h"
+#include "em_chip.h"
+#include "em_emu.h"
+#include "em_timer.h"
 
 // own code
 #include "dma.hh"
@@ -40,7 +39,6 @@ static void setup()
 int main()
 {
 	setup();
-
 	tick::delay(100);
 
 	ym::reset();
@@ -50,21 +48,34 @@ int main()
 
 	adc0::enableDMA();
 	adc0::start1(true); // sample every 72 clocks
-	led::toggle(9);
 
+	// Main loop only reacts to events posted from ISRs.
+	//   Idea: if the main loop becomes too heavy (too many different
+	//     events to check for), then use an event queue.
 	while (true) {
-		led::toggle(8);
+		// Sample buffer ready?
+		if (int16_t* buf = (int16_t*)adc0::fullBufferPtr) {
+			// Send to host over USB
+			usbcdc::write(buf, 1024 * sizeof(int16_t));
+			// and indicate bufferspace is available again
+			//  TODO buffer actually only becomes available when USB has finished sending it
+			adc0::fullBufferPtr = NULL;
+			led::toggle(8);
+		}
 
-		// TODO use ISR instead of polling
-		// wait till buffer full
-		int16_t* buf;
-		do {
-			buf = (int16_t*)adc0::fullBufferPtr;
-		} while (!buf);
+		// TODO listen to host commands (send over USB)
 
-		usbcdc::write(buf, 1024 * 2);
+		// Has an ISR set an error?
+		led::checkError();
 
-		adc0::fullBufferPtr = NULL;
+		// Indicate main loop is still alive.
+		led::toggle(9);
+
+		// Enter EM1 sleep mode (peripherals active, CPU sleeping (wakeup by IRQ)).
+		//  TODO this can go wrong when the IRQ triggered between this
+		//  point and the point above where we tested the vlaue of e.g.
+		//  fullBufferPtr.
+		EMU_EnterEM1();
 	}
 	return 0;
 }

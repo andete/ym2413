@@ -17,6 +17,10 @@ LedInfo pins[NUM] =
 	{ gpioPortE, 13 }, // LED 9
 };
 
+volatile int newError;
+
+////
+
 void setup()
 {
 	for (unsigned i = 0; i < NUM; ++i) {
@@ -48,19 +52,16 @@ void short_demo()
 	}
 }
 
-void error(int err)
+void showError(int err)
 {
-	for (int i = 0; i < 10; ++i) {
+	// Leds 0-3 show the last set error-code.
+	for (int i = 0; i < 4; ++i) {
 		if (err & 1) {
 			on(i);
 		} else {
 			off(i);
 		}
 		err >>= 1;
-	}
-	while (1) {
-		toggle(9);
-		tick::delay(500);
 	}
 }
 

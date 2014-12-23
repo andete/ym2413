@@ -13,10 +13,33 @@ struct LedInfo {
 };
 extern LedInfo pins[NUM];
 
+extern volatile int newError;
+
 void setup();
 void demo();
 void short_demo();
-void error(int err);
+
+
+// Show a 4 bit error status.
+// This part is very fast (can be called from an ISR). The new status is only set from the main loop.
+inline void setError(int err)
+{
+	newError = err;
+}
+
+// Immediately show a new error status
+void showError(int err);
+
+// Second half of the setError() routine, should be called periodically from the main loop.
+inline void checkError()
+{
+	if (newError) {
+		showError(newError);
+		newError = 0;
+	}
+}
+
+
 
 inline void on(const uint8_t led)
 {

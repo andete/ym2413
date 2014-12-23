@@ -15,11 +15,13 @@ volatile int16_t buffer2[NUM_SAMPLES]; //  two buffers
 
 DMA_CB_TypeDef cb; // DMA callback structure
 
+// Runs in ISR context!
 static void dmaTransferComplete(unsigned channel, bool primary, void* /*user*/)
 {
+	// Request main thread to send the finished buffer to the host (over USB).
 	if (fullBufferPtr != NULL) {
-		// buffer hasn't been send yet over USB
-		led::error(6);
+		// previous buffer hasn't been send yet
+		led::setError(6);
 	}
 	fullBufferPtr = primary ? buffer1 : buffer2;
 
@@ -32,7 +34,6 @@ static void dmaTransferComplete(unsigned channel, bool primary, void* /*user*/)
 		NULL,            // no new src address
 		NUM_SAMPLES - 1, // size of this chunk
 		false);          // do not stop after this chunk
-	led::toggle(0);
 }
 
 static void setupDMA()
@@ -169,6 +170,7 @@ uint16_t pollValue()
 
 } // namespace adc0
 
+// Runs in ISR context!
 void ADC0_IRQHandler()
 {
 	// Clear interrupt flag
@@ -177,8 +179,7 @@ void ADC0_IRQHandler()
 
 	// ERROR: ADC Result overflow has occured.
 	// This indicates that the DMA is not able to keep up with the ADC
-	// sample rate and that a samples has been written to the ADC result
-	// registers before the DMA was able to fetch the previous result.
-	// TODO report error outside of ISR
-	led::error(5);
+	// sample rate (a new ADC sample has been written to the result
+	// registers before the DMA was able to fetch the previous value).
+	led::setError(5);
 }

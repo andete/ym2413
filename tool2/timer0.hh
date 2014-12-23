@@ -10,6 +10,6 @@ void busyWaitN(uint32_t cycles);
 
 } // namespace timer0
 
-extern "C" void TIMER0_IRQHandler();
+//extern "C" void TIMER0_IRQHandler();
 
 #endif

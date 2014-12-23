@@ -102,7 +102,8 @@ void busyWaitN(uint32_t cycles)
 
 } // namespace timer0
 
-void TIMER0_IRQHandler()
+// Runs in ISR context!
+/*void TIMER0_IRQHandler()
 {
 	// Clear flag for TIMER0 overflow interrupt
 	TIMER_IntClear(TIMER0, TIMER_IF_OF);
@@ -114,4 +115,4 @@ void TIMER0_IRQHandler()
 	} else {
 		TIMER_CompareBufSet(TIMER0, 0, ++compareValue);
 	}
-}
+}*/

@@ -60,7 +60,11 @@ void setup()
 }
 
 // Set all (12) output pins to the YM2413 at once.
-//
+//  d7-d0: 8 bit data
+//  a0:    1 bit address
+//  we:    write-enable  (true->active)
+//  cs:    chip-seelct   (true->active)
+//  ic:    reset         (true->active)
 static inline void setPins(uint8_t data, bool a0, bool we, bool cs, bool ic)
 {
 	uint32_t value = data

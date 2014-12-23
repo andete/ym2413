@@ -1,6 +1,7 @@
 #ifndef TICK_HH
 #define TICK_HH
 
+#include "em_int.h"
 #include <cstdint>
 
 namespace tick {

@@ -5,6 +5,9 @@
 
 namespace timer0 {
 
+static unsigned scriptDelay = 0;
+static uint16_t* scriptPtr = nullptr;
+
 void setup()
 {
 	// Enable clock for TIMER0
@@ -77,13 +80,9 @@ void setup()
 		.sync       = false, // 
 	};
 
-	// TODO; we may want to have interrupts later to do 
-	// some handling
 	// Enable overflow interrupt
-	//TIMER_IntEnable(TIMER0, TIMER_IF_OF);
-
-	// Enable TIMER0 interrupt vector in NVIC
-	//NVIC_EnableIRQ(TIMER0_IRQn);
+	TIMER_IntEnable(TIMER0, TIMER_IF_OF);
+	NVIC_EnableIRQ(TIMER0_IRQn);
 
 	// Configure timer
 	TIMER_Init(TIMER0, &timer0Init);
@@ -100,19 +99,38 @@ void busyWaitN(uint32_t cycles)
 	}
 }
 
+void playScript(uint16_t* script)
+{
+	GPIO->P[gpioPortC].DOUT = script[0];
+	scriptDelay             = script[1];
+	scriptPtr = script + 2;
+}
+void stopScript()
+{
+	scriptDelay = 0;
+}
+static inline void stepScript()
+{
+	// Is script running?
+	if (scriptDelay == 0) return;
+
+	// Do we need to do something this cycle?
+	--scriptDelay;
+	if (scriptDelay != 0) return;
+
+	// Write new outputs and set next delay.
+	GPIO->P[gpioPortC].DOUT = scriptPtr[0];
+	scriptDelay             = scriptPtr[1];
+	scriptPtr += 2;
+}
+
 } // namespace timer0
 
 // Runs in ISR context!
-/*void TIMER0_IRQHandler()
+void TIMER0_IRQHandler()
 {
 	// Clear flag for TIMER0 overflow interrupt
 	TIMER_IntClear(TIMER0, TIMER_IF_OF);
 
-	uint32_t compareValue = TIMER_CaptureGet(TIMER0, 0);
-	// increment duty-cycle or reset if reached TOP value
-	if (compareValue == TIMER_TopGet(TIMER0)) {
-		TIMER_CompareBufSet(TIMER0, 0, 0);
-	} else {
-		TIMER_CompareBufSet(TIMER0, 0, ++compareValue);
-	}
-}*/
+	timer0::stepScript();
+}

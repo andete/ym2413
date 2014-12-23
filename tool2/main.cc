@@ -6,6 +6,7 @@
 
 // own code
 #include "dma.hh"
+#include "event.hh"
 #include "tick.hh"
 #include "clock.hh"
 #include "adc0.hh"
@@ -49,33 +50,7 @@ int main()
 	adc0::enableDMA();
 	adc0::start1(true); // sample every 72 clocks
 
-	// Main loop only reacts to events posted from ISRs.
-	//   Idea: if the main loop becomes too heavy (too many different
-	//     events to check for), then use an event queue.
-	while (true) {
-		// Sample buffer ready?
-		if (int16_t* buf = (int16_t*)adc0::fullBufferPtr) {
-			// Send to host over USB
-			usbcdc::write(buf, 1024 * sizeof(int16_t));
-			// and indicate bufferspace is available again
-			//  TODO buffer actually only becomes available when USB has finished sending it
-			adc0::fullBufferPtr = NULL;
-			led::toggle(8);
-		}
-
-		// TODO listen to host commands (send over USB)
-
-		// Has an ISR set an error?
-		led::checkError();
-
-		// Indicate main loop is still alive.
-		led::toggle(9);
-
-		// Enter EM1 sleep mode (peripherals active, CPU sleeping (wakeup by IRQ)).
-		//  TODO this can go wrong when the IRQ triggered between this
-		//  point and the point above where we tested the vlaue of e.g.
-		//  fullBufferPtr.
-		EMU_EnterEM1();
-	}
+	// Enter event handling loop
+	event::loop(); // does not return
 	return 0;
 }

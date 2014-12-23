@@ -17,8 +17,6 @@ LedInfo pins[NUM] =
 	{ gpioPortE, 13 }, // LED 9
 };
 
-volatile int newError;
-
 ////
 
 void setup()
@@ -63,6 +61,8 @@ void showError(int err)
 		}
 		err >>= 1;
 	}
+	// Led 4 indicates there has been some error (one or more)
+	on(4);
 }
 
 } // namespace led

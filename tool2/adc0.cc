@@ -1,46 +1,48 @@
 #include "adc0.hh"
 #include "led.hh"
 #include "dma.hh"
+#include "event.hh"
 #include "em_adc.h"
 #include "em_dma.h"
 #include "em_prs.h"
 
 namespace adc0 {
 
-volatile int16_t* volatile fullBufferPtr = NULL;
+int16_t* fullBufferPtr = nullptr;
 
-static const unsigned NUM_SAMPLES = 1024;
-volatile int16_t buffer1[NUM_SAMPLES]; // ADC/DMA ping-pong between these
-volatile int16_t buffer2[NUM_SAMPLES]; //  two buffers
+int16_t buffer1[NUM_SAMPLES]; // ADC/DMA ping-pong between these
+int16_t buffer2[NUM_SAMPLES]; //  two buffers
 
 DMA_CB_TypeDef cb; // DMA callback structure
 
 // Runs in ISR context!
 static void dmaTransferComplete(unsigned channel, bool primary, void* /*user*/)
 {
-	// Request main thread to send the finished buffer to the host (over USB).
-	if (fullBufferPtr != NULL) {
-		// previous buffer hasn't been send yet
-		led::setError(6);
-	}
-	fullBufferPtr = primary ? buffer1 : buffer2;
-
 	// Re-activate the DMA
 	DMA_RefreshPingPong(
 		channel,
 		primary,
 		false,           // use burst
-		NULL,            // no new dst address
-		NULL,            // no new src address
+		nullptr,         // no new dst address
+		nullptr,         // no new src address
 		NUM_SAMPLES - 1, // size of this chunk
 		false);          // do not stop after this chunk
+
+	// Request main thread to send the finished buffer to the host (over USB).
+	if (fullBufferPtr != nullptr) {
+		// previous buffer hasn't been send yet
+		event::postISR(event::DMA_OVERFLOW);
+	}
+	fullBufferPtr = primary ? buffer1 : buffer2;
+	event::postISR(event::DMA_DONE);
+
 }
 
 static void setupDMA()
 {
 	// setup callback function
 	cb.cbFunc = dmaTransferComplete;
-	cb.userPtr = NULL;
+	cb.userPtr = nullptr;
 
 	// setup channel
 	DMA_CfgChannel_TypeDef chnlCfg;
@@ -67,10 +69,10 @@ void enableDMA()
 	DMA_ActivatePingPong(
 		dma::ADC0_CHANNEL,          // channel
 		false,                      // don't use use burst
-		(void*)buffer1,             // primary dst
+		buffer1,                    // primary dst
 		(void*)&(ADC0->SINGLEDATA), // primary src
 		NUM_SAMPLES - 1,            // 
-		(void*)buffer2,             // alternate dst
+		buffer2,                    // alternate dst
 		(void*)&(ADC0->SINGLEDATA), // alternate src
 		NUM_SAMPLES - 1);           //
 }
@@ -167,8 +169,8 @@ uint16_t pollValue()
 	return ADC0->SINGLEDATA;
 }
 
-
 } // namespace adc0
+
 
 // Runs in ISR context!
 void ADC0_IRQHandler()
@@ -181,5 +183,5 @@ void ADC0_IRQHandler()
 	// This indicates that the DMA is not able to keep up with the ADC
 	// sample rate (a new ADC sample has been written to the result
 	// registers before the DMA was able to fetch the previous value).
-	led::setError(5);
+	event::postISR(event::ADC_OVERFLOW);
 }

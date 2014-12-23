@@ -5,7 +5,8 @@
 
 namespace adc0 {
 
-extern volatile int16_t* volatile fullBufferPtr;
+static const unsigned NUM_SAMPLES = 1024;
+extern int16_t* fullBufferPtr;
 
 void setup();
 void enableDMA();

@@ -12,7 +12,9 @@ void setup();
 inline void delay(const uint32_t delay_ms)
 {
 	uint32_t start = jiffy;
-	while ((jiffy - start) < delay_ms) {}
+	while ((jiffy - start) < delay_ms) {
+		__WFI();
+	}
 }
 
 } // namespace tick

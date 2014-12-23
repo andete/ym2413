@@ -162,8 +162,8 @@ $(SILABS)/usb/src/em_usbdep.c \
 $(SILABS)/usb/src/em_usbdint.c \
 $(SILABS)/usb/src/em_usbtimer.c
 
-CX_SRC = adc0.cc clock.cc dma.cc led.cc leuart0.cc main.cc swd.cc tick.cc \
-         timer0.cc usart0.cc usbcdc.cc ym.cc
+CX_SRC = adc0.cc clock.cc dma.cc event.cc led.cc leuart0.cc main.cc swd.cc \
+         tick.cc timer0.cc usart0.cc usbcdc.cc ym.cc
 
 s_SRC +=
 

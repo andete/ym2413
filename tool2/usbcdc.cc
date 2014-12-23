@@ -1,5 +1,4 @@
 #include "usbcdc.hh"
-#include "em_usb.h"
 #include "efm32gg_uart.h"
 
 // USB CDC code based on silabs/kits/EFM32GG_DK3750/examples/usbdcdc
@@ -285,45 +284,6 @@ static int data_received(USB_Status_TypeDef status,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// @brief Callback function called whenever a packet with data has been
-//        transmitted on USB
-//
-// @param[in] status    Transfer status code.
-// @param[in] xferred   Number of bytes transferred.
-// @param[in] remaining Number of bytes not transferred.
-//
-// @return USB_STATUS_OK.
-static int data_transmitted(USB_Status_TypeDef status,
-                            uint32_t /*xferred*/,
-                            uint32_t /*remaining*/)
-{
-	if (status == USB_STATUS_OK) {
-		// TODO handle data
-#if 0
-		if (!dmaRxActive) {
-			// dmaRxActive = false means that a new UART Rx DMA can be started.
-			USBD_Write(EP_DATA_IN, (void*)uartRxBuffer[uartRxIndex ^ 1],
-					uartRxCount, data_transmitted);
-			LastUsbTxCnt = uartRxCount;
-
-			dmaRxActive    = true;
-			dmaRxCompleted = true;
-			DMA_ActivateBasic(1, true, false,
-					(void*)uartRxBuffer[uartRxIndex],
-					(void*)&(UART1->RXDATA),
-					USB_TX_BUF_SIZ - 1);
-			uartRxCount = 0;
-			USBTIMER_Start(0, RX_TIMEOUT, UartRxTimeout);
-		} else {
-			// The UART receive DMA callback function will start a new DMA.
-			usbTxActive = false;
-		}
-#endif
-	}
-	return USB_STATUS_OK;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // @brief
 //   Callback function called each time the USB device state is changed.
 //   Starts CDC operation when device has been configured by USB host.
@@ -496,21 +456,9 @@ static int line_coding_received(USB_Status_TypeDef status,
 	return USB_STATUS_REQ_ERR;
 }
 
-// data _must_ be 4-byte aligned!
-// data needs to be accessable after this call returns!
-void write(const void* data, uint16_t len)
+void write(const void* data, uint16_t len, USB_XferCompleteCb_TypeDef callback)
 {
-	USBD_Write(EP_DATA_IN, const_cast<void*>(data), len, data_transmitted);
-}
-
-// data _must_ be 4-byte aligned!
-// data needs to be accessable after this call returns!
-// TODO deal with this in a smart way to hide these details
-// from external code!
-void print(const char* str)
-{
-	const uint16_t len = strnlen(str, 128);
-	write(str, len);
+	USBD_Write(EP_DATA_IN, const_cast<void*>(data), len, callback);
 }
 
 } // namespace usbcdc

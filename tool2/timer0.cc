@@ -101,13 +101,17 @@ void busyWaitN(uint32_t cycles)
 
 void playScript(uint16_t* script)
 {
+	__disable_irq();
 	GPIO->P[gpioPortC].DOUT = script[0];
 	scriptDelay             = script[1];
 	scriptPtr = script + 2;
+	__enable_irq();
 }
 void stopScript()
 {
+	__disable_irq();
 	scriptDelay = 0;
+	__enable_irq();
 }
 static inline void stepScript()
 {

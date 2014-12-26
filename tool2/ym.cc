@@ -108,20 +108,28 @@ void writeReg(uint8_t reg, uint8_t value)
 void playSine(int volume, int freq)
 {
 	// setup custom instrument
-	ym::writeReg(0, 0x20);
-	ym::writeReg(1, 0x20);
-	ym::writeReg(2, 0x3f);
-	ym::writeReg(3, 0x00);
-	ym::writeReg(4, 0xff);
-	ym::writeReg(5, 0xff);
-	ym::writeReg(6, 0x0f);
-	ym::writeReg(7, 0x0f);
+	writeReg(0, 0x20);
+	writeReg(1, 0x20);
+	writeReg(2, 0x3f);
+	writeReg(3, 0x00);
+	writeReg(4, 0xff);
+	writeReg(5, 0xff);
+	writeReg(6, 0x0f);
+	writeReg(7, 0x0f);
 
-	ym::writeReg(0x10, freq & 0xff); // frequency (8 lower bits)
-	ym::writeReg(0x30, (0 << 16) | (volume & 0x0f)); // custom instrument / volume
-	ym::writeReg(0x20, 0x10 | ((freq >> 8) & 0x0f)); // key-on / frequency (upper 4 bits)
+	writeReg(0x10, freq & 0xff); // frequency (8 lower bits)
+	writeReg(0x30, (0 << 16) | (volume & 0x0f)); // custom instrument / volume
+	writeReg(0x20, 0x10 | ((freq >> 8) & 0x0f)); // key-on / frequency (upper 4 bits)
 }
 
+void silence()
+{
+	// write 0 to all registers
+	// (these are the initial register values after reset)
+	for (int i = 0; i < 0x40; ++i) {
+		writeReg(i, 0x00);
+	}
+}
 
 // The YM2413 can output 9 music channels (or 6 + 5). The channels are output
 // in a pattern that repeats every 72 (YM2413) clock cycles. Timer0 ticks for

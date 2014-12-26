@@ -9,6 +9,8 @@ static const unsigned NUM_SAMPLES = 1024;
 extern int16_t* fullBufferPtr;
 
 void setup();
+void callibrateOffset();
+
 void enableDMA();
 void disableDMA();
 void start0(bool irq); // every YM2413 clock

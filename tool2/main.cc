@@ -148,6 +148,7 @@ int main()
 {
 	setup();
 	tick::delay(100);
+	adc0::callibrateOffset();
 
 	ym::reset();
 	ym::syncTimer1();

@@ -10,6 +10,8 @@ void setup();
 void reset();
 void writeReg(uint8_t reg, uint8_t value);
 
+void silence();
+
 // Setup custom instrument with sine wave,
 // play this instrument on channel-1
 // @param volume: 0..15 (0 = loudest)

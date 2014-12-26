@@ -2,6 +2,8 @@
 #include "led.hh"
 #include "dma.hh"
 #include "event.hh"
+#include "tick.hh"
+#include "ym.hh"
 #include "em_adc.h"
 #include "em_dma.h"
 #include "em_prs.h"
@@ -107,6 +109,53 @@ void setup()
 	init_single.leftAdjust = false;
 	init_single.rep        = false;        // wait for next PRS event
 	ADC_InitSingle(ADC0, &init_single);
+}
+
+static int calOffStep(uint32_t other, int cal, int d)
+{
+	// Instead of binary search (as recommended in the reference manual),
+	// it seems that we can simply do 'cal = sum/1000'. Though I still kept
+	// the binary-search.
+	int sum = 0;
+	for (int i = 0; i < 1000; ++i) {
+		sum += int16_t(adc0::pollValue());
+	}
+	if (d != 0) {
+		if (sum >= 0) {
+			cal += d;
+		} else {
+			cal -= d;
+		}
+	} else {
+		if (sum >= 0) {
+			// nothing
+		} else {
+			cal -= 1;
+		}
+	}
+	ADC0->CAL = other | (cal & 0x7F);
+	return cal;
+}
+
+void callibrateOffset()
+{
+	led::toggle(5);
+	ym::silence();
+	tick::delay(100);
+
+	disableDMA();
+	start0(false); // every YM2413 clock
+
+	uint32_t other = ADC0->CAL & 0xffffff00; // preserve other values
+	int cal = 0; // start at 0
+	ADC0->CAL = other | (cal & 0x7F);
+	for (int d = 32; d > 0; d >>= 1) { // 32, 16, 8, 4, 2, 1
+		cal = calOffStep(other, cal, d);
+	}
+	cal = calOffStep(other, cal, 0);
+
+	stop();
+	led::toggle(5);
 }
 
 static void irqOnOverflow(bool enable)

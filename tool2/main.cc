@@ -26,13 +26,13 @@ uint16_t sineScript[] = {
 	0xD20,  1,
 	0x920,  1,
 	0xF20, 84-2,
-	// R#0x01 <- 0x23
+	// R#0x01 <- 0x20
 	0xC01,  1,
 	0x801,  1,
 	0xE01, 12-2,
-	0xD23,  1,
-	0x923,  1,
-	0xF23, 84-2,
+	0xD20,  1,
+	0x920,  1,
+	0xF20, 84-2,
 	// R#0x02 <- 0x3F
 	0xC02,  1,
 	0x802,  1,
@@ -99,6 +99,31 @@ uint16_t sineScript[] = {
 	// end
 	0xF00, 0
 };
+uint16_t pianoScript[] = {
+	// R#0x10 <- 0x61
+	0xC10,  1,
+	0x810,  1,
+	0xE10, 12-2,
+	0xD61,  1,
+	0x961,  1,
+	0xF61, 84-2,
+	// R#0x30 <- 0x30
+	0xC30,  1,
+	0x830,  1,
+	0xE30, 12-2,
+	0xD30,  1,
+	0x930,  1,
+	0xF30, 84-2,
+	// R#0x20 <- 0x12
+	0xC20,  1,
+	0x820,  1,
+	0xE20, 12-2,
+	0xD12,  1,
+	0x912,  1,
+	0xF12, 84-2,
+	// end
+	0xF00, 0
+};
 
 static void setup()
 {
@@ -128,7 +153,8 @@ int main()
 	ym::syncTimer1();
 
 	//ym::playSine(0, 0x261); // max volume
-	timer0::playScript(sineScript);
+	timer0::playScript(sineScript); // constant (max) amplitude
+	//timer0::playScript(pianoScript); // amplitude decays over time
 
 	adc0::enableDMA();
 	adc0::start1(true); // sample every 72 clocks

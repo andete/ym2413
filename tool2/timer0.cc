@@ -53,16 +53,13 @@ void setup()
 	// Route CC0 to location 0 (PA0) and enable pin
 	TIMER0->ROUTE |= (TIMER_ROUTE_CC0PEN | TIMER_ROUTE_LOCATION_LOC0);
 
-	// TODO: actual timer setup to create our signal
 	// Set Top Value
-	const uint32_t PWM_FREQ = 3*1000*1000/10; // 3 Mhz divided by 10
-	const uint32_t topValue = CMU_ClockFreqGet(cmuClock_HFPER)/PWM_FREQ;
-	TIMER_TopSet(TIMER0, topValue);
+	const uint32_t topValue = 48000 / 300; // 48MHz / 300kHz
+	TIMER_TopSet(TIMER0, topValue - 1);
 
 	// 50% duty cycle
-	TIMER_CompareSet(TIMER0, 0, topValue/2);
+	TIMER_CompareSet(TIMER0, 0, topValue / 2);
 
-	// TODO
 	// Select timer parameters
 	TIMER_Init_TypeDef timer0Init = {
 		.enable     = true,

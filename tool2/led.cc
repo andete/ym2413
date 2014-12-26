@@ -52,17 +52,22 @@ void short_demo()
 
 void showError(int err)
 {
+	//// Stop on first error
+	//static bool hasError = false;
+	//if (hasError) return;
+	//hasError = true;
+
 	// Leds 0-3 show the last set error-code.
 	for (int i = 0; i < 4; ++i) {
 		if (err & 1) {
-			on(i);
+			on (i + 1);
 		} else {
-			off(i);
+			off(i + 1);
 		}
 		err >>= 1;
 	}
-	// Led 4 indicates there has been some error (one or more)
-	on(4);
+	// Led 0 indicates there has been some error (one or more)
+	on(0);
 }
 
 } // namespace led

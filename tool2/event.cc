@@ -36,6 +36,8 @@ static int usbCallback(USB_Status_TypeDef status, uint32_t /*xferred*/, uint32_t
 	}
 	// Indicate buffer-space is available again (can be filled with new ADC data).
 	adc0::fullBufferPtr = nullptr;
+	led::toggle(5); // TODO after a while this callback doesn't trigger anymore !!!
+	                //  UPDATE: happens when host is not listening to the send data
 	return USB_STATUS_OK;
 }
 
@@ -56,6 +58,7 @@ void loop()
 				// Send buffer to host (over USB).
 				usbcdc::write(adc0::fullBufferPtr, adc0::NUM_SAMPLES * sizeof(int16_t),
 				              usbCallback);
+				adc0::fullBufferPtr = nullptr; // TODO should (only) be done in usbCallback
 				led::toggle(8);
 				break;
 
@@ -71,13 +74,17 @@ void loop()
 			case USB_ERROR:
 				led::showError(4);
 				break;
+			default:
+				// unknown event type
+				led::showError(3);
+				break;
 			}
+
+			// Indicate main loop is still alive.
+			led::toggle(9);
 
 			__disable_irq();
 		}
-
-		// Indicate main loop is still alive.
-		led::toggle(9);
 
 		// Enter EM1 sleep mode (peripherals active, CPU sleeping (wakeup by IRQ)).
 		__WFI();        // it's ok to call this with interrupts disabled

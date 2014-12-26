@@ -109,7 +109,7 @@ void playSine(int volume, int freq)
 {
 	// setup custom instrument
 	ym::writeReg(0, 0x20);
-	ym::writeReg(1, 0x23);
+	ym::writeReg(1, 0x20);
 	ym::writeReg(2, 0x3f);
 	ym::writeReg(3, 0x00);
 	ym::writeReg(4, 0xff);

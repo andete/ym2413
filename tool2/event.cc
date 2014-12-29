@@ -62,6 +62,19 @@ void loop()
 				led::toggle(8);
 				break;
 
+			case USB_RX:
+				uint8_t data;
+				while (usbcdc::pollRead(data)) {
+					if (data == 'A') {
+						led::toggle(1);
+					} else if (data == 'B') {
+						led::toggle(2);
+					} else if (data == 'C') {
+						led::toggle(3);
+					}
+				}
+				break;
+
 			case ADC_OVERFLOW:
 				led::showError(5);
 				break;
@@ -73,6 +86,9 @@ void loop()
 				break;
 			case USB_ERROR:
 				led::showError(4);
+				break;
+			case USB_RX_OVERFLOW:
+				led::showError(7);
 				break;
 			default:
 				// unknown event type

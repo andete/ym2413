@@ -1,4 +1,5 @@
 #include "usbcdc.hh"
+#include "event.hh"
 #include "efm32gg_uart.h"
 
 // USB CDC code based on silabs/kits/EFM32GG_DK3750/examples/usbdcdc
@@ -190,11 +191,11 @@ static const void* const strings[] = {
 static const uint8_t bufferingMultiplier[NUM_EP_USED + 1] = { 1, 1, 2, 2 };
 
 static const USBD_Callbacks_TypeDef callbacks = {
-	.usbReset        = NULL,
+	.usbReset        = nullptr,
 	.usbStateChange  = usbcdc::state_change,
 	.setupCmd        = usbcdc::setup_cmd,
-	.isSelfPowered   = NULL,
-	.sofInt          = NULL
+	.isSelfPowered   = nullptr,
+	.sofInt          = nullptr
 };
 
 static USBD_Init_TypeDef initstruct = {
@@ -216,17 +217,6 @@ static cdcLineCoding_TypeDef __attribute__ ((aligned(4))) cdcLineCoding = {
 };
 EFM32_PACK_END()
 
-STATIC_UBUF(usbRxBuffer0, USB_RX_BUF_SIZ);    // USB receive buffers.
-STATIC_UBUF(usbRxBuffer1, USB_RX_BUF_SIZ);
-
-static const uint8_t* usbRxBuffer[2] = { usbRxBuffer0, usbRxBuffer1 };
-
-static int            usbRxIndex;
-//static int            usbBytesReceived;
-//static int            LastUsbTxCnt;
-
-static bool           usbRxActive;
-//static bool           usbTxActive;
 
 void setup()
 {
@@ -244,50 +234,58 @@ void setup()
 }
 
 
+STATIC_UBUF(usbRxBuffer, USB_RX_BUF_SIZ); // USB receive buffer
+static const unsigned USB_BUF_SIZE = 256;
+uint8_t usbBuffer[USB_BUF_SIZE];
+unsigned usbRdIdx = 0;
+unsigned usbWrIdx = 0;
+
 ///////////////////////////////////////////////////////////////////////////////
-// @brief Callback function called whenever a new packet with data is received
-//        on USB.
-//
+// @brief Called whenever a new data packet is received on USB
 // @param[in] status    Transfer status code.
 // @param[in] xferred   Number of bytes transferred.
 // @param[in] remaining Number of bytes not transferred.
-//
 // @return USB_STATUS_OK.
+// Runs in ISR context! (??)
 static int data_received(USB_Status_TypeDef status,
                          uint32_t xferred,
                          uint32_t /*remaining*/)
 {
 	if ((status == USB_STATUS_OK) && (xferred > 0)) {
-		usbRxIndex ^= 1;
-
-		// TODO handle USB DATA !
-#if 0
-		if (!dmaTxActive) {
-			// dmaTxActive = false means that a new UART Tx DMA can be started.
-			dmaTxActive = true;
-			DMA_ActivateBasic(0, true, false,
-					(void*)&(UART1->TXDATA),
-					(void*)usbRxBuffer[usbRxIndex ^ 1],
-					xferred - 1);
-
-			// Start a new USB receive transfer.
-			USBD_Read(EP_DATA_OUT, (void*)usbRxBuffer[usbRxIndex],
-					USB_RX_BUF_SIZ, UsbDataReceived);
-		} else {
-			// The UART transmit DMA callback function will start a new DMA.
-			usbRxActive      = false;
-			usbBytesReceived = xferred;
+		// simple byte-per-byte copy,
+		// TODO improve later
+		for (uint32_t i = 0; i < xferred; ++i) {
+			usbBuffer[usbWrIdx] = usbRxBuffer[i];
+			++usbWrIdx; if (usbWrIdx == USB_BUF_SIZE) usbWrIdx = 0;
+			if (usbWrIdx == usbRdIdx) {
+				event::postISR(event::USB_RX_OVERFLOW);
+			}
 		}
-#endif
+		event::postISR(event::USB_RX);
+
+		USBD_Read(EP_DATA_OUT, const_cast<uint8_t*>(usbRxBuffer),
+		          USB_RX_BUF_SIZ, data_received);
 	}
 	return USB_STATUS_OK;
+}
+
+bool pollRead(uint8_t& output)
+{
+	__disable_irq();
+	if (usbRdIdx == usbWrIdx) {
+		__enable_irq();
+		return false;
+	}
+	output = usbBuffer[usbRdIdx];
+	++usbRdIdx; if (usbRdIdx == USB_BUF_SIZE) usbRdIdx = 0;
+	__enable_irq();
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // @brief
 //   Callback function called each time the USB device state is changed.
 //   Starts CDC operation when device has been configured by USB host.
-//
 // @param[in] oldState The device state the device has just left.
 // @param[in] newState The new device state.
 static void state_change(USBD_State_TypeDef oldState,
@@ -300,27 +298,11 @@ static void state_change(USBD_State_TypeDef oldState,
 		}
 
 		// Start receiving data from USB host.
-		usbRxIndex  = 0;
-		usbRxActive = true;
-		// dmaTxActive = false;
-		USBD_Read(EP_DATA_OUT, const_cast<uint8_t*>(usbRxBuffer[usbRxIndex]),
+		usbRdIdx = 0;
+		usbWrIdx = 0;
+		USBD_Read(EP_DATA_OUT, const_cast<uint8_t*>(usbRxBuffer),
 		          USB_RX_BUF_SIZ, data_received);
 
-		// TODO
-#if 0
-		// Start receiving data on UART.
-		uartRxIndex    = 0;
-		LastUsbTxCnt   = 0;
-		uartRxCount    = 0;
-		dmaRxActive    = true;
-		usbTxActive    = false;
-		dmaRxCompleted = true;
-		DMA_ActivateBasic(1, true, false,
-				(void *) uartRxBuffer[ uartRxIndex ],
-				(void *) &(UART1->RXDATA),
-				USB_TX_BUF_SIZ - 1);
-		USBTIMER_Start(0, RX_TIMEOUT, UartRxTimeout);
-#endif
 	} else if ((oldState == USBD_STATE_CONFIGURED) &&
 			(newState != USBD_STATE_SUSPENDED)) {
 		// We have been de-configured, stop CDC functionality
@@ -357,7 +339,7 @@ static int setup_cmd(const USB_Setup_TypeDef* setup)
 			    (setup->wLength == 7) && // Length of cdcLineCoding
 			    (setup->Direction == USB_SETUP_DIR_IN)) {
 				// Send current settings to USB host.
-				USBD_Write(0, &cdcLineCoding, 7, NULL);
+				USBD_Write(0, &cdcLineCoding, 7, nullptr);
 				retVal = USB_STATUS_OK;
 			}
 			break;

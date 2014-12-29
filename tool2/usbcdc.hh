@@ -16,6 +16,13 @@ void setup();
 //	-> should return USB_STATUS_OK
 void write(const void* data, uint16_t len, USB_XferCompleteCb_TypeDef callback = nullptr);
 
+// Read one byte received (from host) over USB.
+// @param output: result is stored here
+// @result: True iff there was a pending byte
+// Call this function in a loop until it returns false.
+// TODO make more efficient way to access the data?
+bool pollRead(uint8_t& output);
+
 } // namespace usbcdc
 
 #endif

@@ -198,10 +198,7 @@ vector<int> createBins(const vector<uint16_t>& buf, int width, const string& pre
 	     "f = load(\"" + prefix + ".filtered\");\n"
 	     "p = load(\"" + prefix + ".peaks\");\n"
 	     "\n"
-	     "np = length(p);\n"
-	     "z = zeros(1, np);\n"
-	     "\n"
-	     "plot(h,\"-\", f,\"-\", p,z,\"x\");\n";
+	     "plot(h,\"-\", f,\"-\",\"LineWidth\",1, p+1,f(round(p+1)),\"o\",\"LineWidth,\",2);\n";
 
 	return intBoundaries(peaks2);
 }

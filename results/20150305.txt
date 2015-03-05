@@ -1,0 +1,86 @@
+This is a follow-up on '20150209.txt'. My first idea was to write a single
+text and constantly update it once I figure out more details of the
+YM2413. Now I feel more like writing several short texts and only at the
+very end condense everything into one final text. I'm not sure yet what's
+best. The advantage of this new approach is that I can more easily point
+out mistakes in my earlier findings.
+
+
+So let's start with a mistake from the previous text:
+
+The goal of the previous text was to map measured ADC levels (12-bit) back
+to YM2413 levels (9-bit). I measured a sine wave, calculated the histogram
+and did peak detection in that histogram. I found that the distances
+between consecutive peaks was not constant and assumed this was caused by
+measurement noise and therefor applied a smoothing algorithm. It turns out
+this assumption was not completely true ... I'll come back to this.
+
+In the mean time I was pointed to this picture:
+    http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
+this is a die-shot of the YM2413. Personally I can't make much of this
+picture. But I have a friend who (used to) design digital/analog ICs at
+the transistor level (so more or less manually drawing these structures).
+And together we could derive some interesting stuff from this picture.
+
+We mostly looked at the DAC, this is the first larger rectangle in the
+top-left corner. If you zoom in, you see 512 switches arranged in a 32x16
+grid. This is a thermometer-coded 9-bit DAC, left from the switches is a
+4-bit thermometer-decoder that selects the columns, right is a 5-bit
+thermometer-decoder that selects the rows.
+
+You can also see two wires that go from the bottom center of the DAC to
+the top-left. These direct the output of the DAC to either the RO or the
+MO output pin. The RO/MO pins are the two left most pins located at the
+top row.
+
+Because of the 32x16 arrangement of this DAC (and because, I'm told, this
+is a relatively cheap low-quality implementation), it's not unexpected to
+see this 32x16 structure in the DAC output levels. Looking back at the
+'displacement.png' image of the previous text you can actually see this
+32x16 structure a bit. With some goodwill you can see 'regular' peaks that
+repeat every 32 steps (and between the peaks the curve should linearly
+decrease, though this feature mostly drowns in the noise). This curve is
+actually closely related to the INL/DNL curves of a DAC (see
+https://en.wikipedia.org/wiki/Differential_nonlinearity). And for this DAC
+implementation that curve is expected to show a saw-tooth shape.
+
+Anyway, the conclusion is that the smoothing step I performed last time is
+actually counter-productive because it hides the inherent non-linearities
+of the YM2413 DAC.
+
+
+
+Another big change compared to last time is that I now 16x oversample the
+YM2413 output signal. That is instead of measuring each YM2413 sample once
+we take the sum of 16 samples taken shortly after each other. This results
+in a much less noisy signal. The SoC we use actually has hardware support
+for oversampling.
+
+Our ADC returns a 12-bit value. If we sum 16 such values we have
+log2(16)=4 bits extra. So from now on I'll report ADC values as 16-bit
+values.
+  (In theory, assuming we have Gaussian white noise, 16x oversampling
+  increases the effective resolution by sqrt(16). That would mean we now
+  have an effective resolution of 14-bit. I don't know to what degree this
+  condition of Gaussian white-noise is true).
+
+The disadvantage of 16x oversampling is that it also takes 16x longer. So
+I had to clock the YM2413 also 16x slower. It's now running at 50kHz.
+That's a lot slower than the 3.5MHz the YM2413 was designed for. (Though
+from the die shot we could also derive that the output of this type of DAC
+remains stable even if you heavily under clock the IC). Unfortunately that
+also means that sampling a YM2413 sound that would normally take 1s now
+takes over 1 minute.
+
+As I mentioned before, the main reason for oversampling is to reduce the
+noise of the measured signal. Though even now the signal is not yet
+perfect, so occasional misclassification is still possible. I also tried
+even higher oversampling factors (32x, or even 256x) but that didn't
+improve the result any further.
+
+
+
+    TODO images
+    TODO 512 levels
+
+    TODO new test prog

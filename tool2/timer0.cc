@@ -7,6 +7,7 @@ namespace timer0 {
 
 static unsigned scriptDelay = 0;
 static uint16_t* scriptPtr = nullptr;
+static PlayCallback scriptCallback = nullptr;
 
 void setup()
 {
@@ -20,6 +21,10 @@ void setup()
 	timer1Init.enable = false; // don't start yet
 	timer1Init.sync = true;    // start when timer-0 starts
 	TIMER_TopSet(TIMER1, 72-1);
+	//timer1Init.clkSel = timerClkSelHFPerClk; // chain to timer-0
+	//timer1Init.enable = true; // don't start yet
+	//timer1Init.sync = false;    // start when timer-0 starts
+	//TIMER_TopSet(TIMER1, 60-1);
 	TIMER_Init(TIMER1, &timer1Init);
 
 	// TODO
@@ -54,7 +59,8 @@ void setup()
 	TIMER0->ROUTE |= (TIMER_ROUTE_CC0PEN | TIMER_ROUTE_LOCATION_LOC0);
 
 	// Set Top Value
-	const uint32_t topValue = 48000 / 300; // 48MHz / 300kHz
+	const uint32_t topValue = 48000 / 50; // 48MHz / 50kHz
+	//const uint32_t topValue = 48000 / 5; // 48MHz / 5kHz
 	TIMER_TopSet(TIMER0, topValue - 1);
 
 	// 50% duty cycle
@@ -96,12 +102,13 @@ void busyWaitN(uint32_t cycles)
 	}
 }
 
-void playScript(uint16_t* script)
+void playScript(uint16_t* script, PlayCallback callback)
 {
 	__disable_irq();
 	GPIO->P[gpioPortC].DOUT = script[0];
 	scriptDelay             = script[1];
 	scriptPtr = script + 2;
+	scriptCallback = callback;
 	__enable_irq();
 }
 void stopScript()
@@ -123,6 +130,9 @@ static inline void stepScript()
 	GPIO->P[gpioPortC].DOUT = scriptPtr[0];
 	scriptDelay             = scriptPtr[1];
 	scriptPtr += 2;
+	if ((scriptDelay == 0) && scriptCallback) {
+		scriptCallback();
+	}
 }
 
 } // namespace timer0

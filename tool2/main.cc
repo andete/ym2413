@@ -154,11 +154,11 @@ int main()
 	ym::syncTimer1();
 
 	//ym::playSine(0, 0x261); // max volume
-	timer0::playScript(sineScript); // constant (max) amplitude
+	//timer0::playScript(sineScript, nullptr); // constant (max) amplitude
 	//timer0::playScript(pianoScript); // amplitude decays over time
 
 	adc0::enableDMA();
-	adc0::start1(true); // sample every 72 clocks
+	//adc0::start1(true); // sample every 72 clocks
 
 	// Enter event handling loop
 	event::loop(); // does not return

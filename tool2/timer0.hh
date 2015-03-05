@@ -8,7 +8,8 @@ namespace timer0 {
 void setup();
 void busyWaitN(uint32_t cycles);
 
-void playScript(uint16_t* script);
+using PlayCallback = void (*)();
+void playScript(uint16_t* script, PlayCallback callback);
 void stopScript();
 
 } // namespace timer0

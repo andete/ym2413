@@ -90,7 +90,7 @@ void setup()
 	setupDMA();
 
 	ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
-	init.ovsRateSel = adcOvsRateSel2;
+	init.ovsRateSel = adcOvsRateSel16;
 	init.lpfMode    = adcLPFilterBypass;
 	init.warmUpMode = adcWarmupKeepADCWarm;
 	init.timebase   = ADC_TimebaseCalc(0);
@@ -102,7 +102,8 @@ void setup()
 	init_single.prsSel     = adcPRSSELCh5; // channel 5
 	init_single.acqTime    = adcAcqTime1;  // 1 cycle
 	init_single.reference  = adcRefVDD;    // Buffered VDD reference
-	init_single.resolution = adcRes12Bit;  // 12 bit
+	//init_single.resolution = adcRes12Bit;  // 12 bit
+	init_single.resolution = adcResOVS;    // oversampling
 	init_single.input      = adcSingleInpCh0Ch1; // RO-MO
 	init_single.diff       = true;
 	init_single.prsEnable  = true;         // use PRS

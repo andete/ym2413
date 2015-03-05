@@ -438,9 +438,44 @@ static int line_coding_received(USB_Status_TypeDef status,
 	return USB_STATUS_REQ_ERR;
 }
 
+struct WrtElem {
+	const void* data;
+	uint16_t len;
+	USB_XferCompleteCb_TypeDef callback;
+};
+static const unsigned QUEUE_SIZE = 32;
+static WrtElem queue[QUEUE_SIZE];
+static unsigned wrIdx = 0;
+static unsigned rdIdx = 0;
+
+// Runs in ISR context!
+static int writeCallback(USB_Status_TypeDef status, uint32_t xferred, uint32_t remaining)
+{
+	int result = queue[rdIdx].callback
+		? queue[rdIdx].callback(status, xferred, remaining)
+		: status;
+	rdIdx = (rdIdx + 1) % QUEUE_SIZE;
+	if (rdIdx != wrIdx) {
+		USBD_Write(EP_DATA_IN, const_cast<void*>(queue[rdIdx].data),
+		           queue[rdIdx].len, writeCallback);
+	}
+	return result;
+}
+
 void write(const void* data, uint16_t len, USB_XferCompleteCb_TypeDef callback)
 {
-	USBD_Write(EP_DATA_IN, const_cast<void*>(data), len, callback);
+	__disable_irq();
+	queue[wrIdx].data     = data;
+	queue[wrIdx].len      = len;
+	queue[wrIdx].callback = callback;
+	if (wrIdx == rdIdx) {
+		USBD_Write(EP_DATA_IN, const_cast<void*>(data), len, writeCallback);
+	}
+	wrIdx = (wrIdx + 1) % QUEUE_SIZE;
+	if (wrIdx == rdIdx) {
+		event::post(event::USB_TX_OVERFLOW);
+	}
+	__enable_irq();
 }
 
 } // namespace usbcdc

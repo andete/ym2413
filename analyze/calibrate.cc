@@ -9,41 +9,9 @@ using namespace std;
 
 auto createScript()
 {
-	Patch sine;
-	sine.mod.AM =  0;
-	sine.mod.PM =  0;
-	sine.mod.EG =  1;
-	sine.mod.KR =  0;
-	sine.mod.ML =  0;
-	sine.mod.KL =  0;
-	sine.mod.TL = 63;
-	sine.mod.WF =  0;
-	sine.mod.FB =  0;
-	sine.mod.AR = 15;
-	sine.mod.DR = 15;
-	sine.mod.SL =  0;
-	sine.mod.RR = 15;
-	sine.car.AM =  0;
-	sine.car.PM =  0;
-	sine.car.EG =  1;
-	sine.car.KR =  0;
-	sine.car.ML =  0;
-	sine.car.KL =  0;
-	sine.car.WF =  0;
-	sine.car.AR = 15;
-	sine.car.DR = 15;
-	sine.car.SL =  0;
-	sine.car.RR = 15;
-	//printPatch(sine);
-
-	//uint8_t regs[8];
-	//convert(sine, regs);
-	//printRegisters(regs);
-
 	Script script;
 	//addReset(script);
-	setInstrument(sine, script);
-	//printScript(script);
+	setInstrument(getSinePatch(), script);
 	writeRegister(0x10, 0x61, script);
 	writeRegister(0x30, 0x00, script);
 	writeRegister(0x20, 0x12, script);
@@ -151,7 +119,7 @@ vector<int> intBoundaries(const vector<double>& peaks)
 		double h = (peaks[i + 1] + peaks[i]) / 2.0;
 		result.push_back(int(h));
 	}
-	result.push_back(63356);
+	result.push_back(65536);
 	return result;
 }
 

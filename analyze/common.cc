@@ -12,6 +12,35 @@
 
 using namespace std;
 
+Patch getSinePatch()
+{
+	Patch sine;
+	sine.mod.AM =  0;
+	sine.mod.PM =  0;
+	sine.mod.EG =  1;
+	sine.mod.KR =  0;
+	sine.mod.ML =  0;
+	sine.mod.KL =  0;
+	sine.mod.TL = 63;
+	sine.mod.WF =  0;
+	sine.mod.FB =  0;
+	sine.mod.AR =  0; // 15
+	sine.mod.DR = 15;
+	sine.mod.SL =  0;
+	sine.mod.RR = 15;
+	sine.car.AM =  0;
+	sine.car.PM =  0;
+	sine.car.EG =  1;
+	sine.car.KR =  0;
+	sine.car.ML =  0;
+	sine.car.KL =  0;
+	sine.car.WF =  0;
+	sine.car.AR = 15;
+	sine.car.DR = 15;
+	sine.car.SL =  0;
+	sine.car.RR = 15;
+	return sine;
+}
 
 void convert(const Patch& patch, uint8_t regs[8])
 {

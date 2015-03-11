@@ -37,6 +37,9 @@ struct Patch {
 	// R#3,bit5 not used (only 63 bits instead of 64)
 };
 
+Patch getSinePatch();
+void printPatch(const Patch& p);
+
 using Script = std::vector<uint16_t>;
 
 void init(const char* dev);

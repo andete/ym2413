@@ -1,0 +1,124 @@
+* volume levels
+
+I finally got to do some 'real' YM2413 reverse engineering. Though I
+started simple: I looked at the 4-bit volume register of the YM2413
+channels (located in bits 3-0 of registers 0x30-0x38).
+
+I wrote a program that plays a sine wave (though the exact shape is less
+important here) for all 16 volume settings. I captured those signals (see
+analyze/volume/volume{0-15}.raw) converted them to YM2413 levels
+(analyze/volume/volume{0-15}.out) and looked at the maximum amplitude of
+the signal.
+
+That gives me 16 pictures that look like this (the picture shows vol=0):
+  [image: ym-vol-0.png]
+As expected for volume=0 (the maximum volume setting), the signal spans
+the full 9-bit range going from 0-511.
+   ... I should start using signed YM2413 signal values, in that
+   case the signal goes from -255 to +255 (including both -0 and +0, more
+   on these two zeros below).
+
+Mostly because it looks nice, I (manually) copy-pasted one sine-period of
+each volume setting into a single picture:
+ [image: all-volumes.png]
+
+Here's a table showing volume-setting vs maximum-amplitude:
+	volume / amplitude
+	 0       255
+	 1       181
+	 2       127
+	 3        90
+	 4        63
+	 5        45
+	 6        31
+	 7        22
+	 8        15
+	 9        11
+	10         7
+	11         5
+	12         3
+	13         2
+	14         1
+	15         1
+
+As already mentioned for vol=0 we get a maximum amplitude of 255. The
+YM2413 datasheet states that each volume step changes the volume by -3dB
+(thus multiplying the amplitude by a factor sqrt(0.5)). And that's also
+what we see in this table.
+
+The table shows the same maximum amplitude for volumes 14 and 15. Let's
+take a closer look:
+  [image: ym-vol-14.png]
+  [image: ym-vol-15.png]
+In both cases the signal (only) takes on 4 distinct values: -1, -0, +0 and
++1 (more on -0 and +0 below). But for vol=14 (the louder of the two) the
+signal is more often +/-1 than for vol=15, so on average it's further away
+from zero. Or in other words after quantization both signals use the same
+set of (only 4) values, but the signal for vol=14 has higher energy than
+the one for vol=15.
+
+Anyway, this shows that only looking at the maximum amplitude doesn't tell
+the whole story. I'll have to investigate this in more detail later.
+Probably after I've figured out the exact shape of the sine wave (it's
+not a perfect sine wave, instead it's a discretized version stored in
+ROM).
+
+The pictures above showed YM2413 levels, it's also interesting to look at
+the raw signal (I mean the ADC values not yet converted to YM2413 levels).
+The following image shows the raw signal for vol=12.
+  [image raw-vol-12.png]
+
+As explained in earlier posts there's relatively little noise near the
+center levels, so we can very clearly see the distinct YM2413 levels. But
+what is strange in this image is the non-uniform distance between the
+different levels (y-axis). For most levels this distance is (very roughly)
+about 100 ADC units, but for the center levels the distance is only about
+50 units.
+
+The two levels encircled in red are what I've been calling -0 and +0. If
+we make these two levels coincide (so move -0 a bit up and +0 a bit down),
+we get a much nicer image (though this transformation doesn't yet make the
+inter-level-distance completely uniform). And this confirms my guess that
+-0 and +0 should (ideally) be the same level.
+
+
+One thing I noticed before (when writing the earlier posts) but didn't
+mention yet in these posts is that the rising side of the sine wave (but
+not the falling side) shows some anomalies. These are shown in the next
+image:
+  [image rising-side.png]
+So instead of monotonically rising, at regular intervals, the signal jumps
+up for one sample, then jumps two levels down and then goes back to the
+original level. My current best explanation is that this is caused by the
+modulator part of the YM2413 instrument settings. These are the settings
+used in this image:
+  mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=15 SL=00 RR=15}
+  car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=15 DR=15 SL=00 RR=15}
+So apparently, even though mod.TL=63, the frequency modulation is not
+fully suppressed. I also tried setting mod.AR=0, but that didn't make any
+difference.
+
+What did help was set mod.WF=1 (use a clipped sine wave for the modulator,
+so for half a period the signal is zero) and set car.ML=1 (make the
+carrier move twice as fast as the modulator). The combined effect is that
+we now have alternatingly a clean period and a period with anomalies.
+
+
+
+* sine-table resolution
+
+Above I mentioned we need to know the exact shape of the sine wave to be
+able to exactly calculate the volume levels (because we could only measure
+amplitudes up to integer YM2413 levels). So let's make a start in
+investigating that sine wave table. One small (easy) aspect is to
+determine the number of entries in the table.
+
+
+-> set frequency to power-of-2
+ -> remains constant for exactly 8 samples
+  -> exactly 8192 samples for one full wave
+ => 1024 step per sine
+-> only need to store 1/4 of sine wave
+ -> 256 rom entries
+  -> same as
+     https://docs.google.com/document/d/18IGx18NQY_Q1PJVZ-bHywao9bhsDoAqoIn1rIm42nwo/edit

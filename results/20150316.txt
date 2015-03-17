@@ -23,7 +23,7 @@ fractional bits.
 
 Fixed-point calculations are very cheap, both in software and (even
 more) in hardware. Most (all?) YM2413 emulators also perform the phase
-calculations in fixed-point. But not all emulator code agrees on the
+calculations in fixed-point. But not all emulation code agrees on the
 number of bits before and after the decimal point. From the previous
 post we know there are 10 bits before, but how many bits are there after
 the decimal point?
@@ -31,12 +31,12 @@ the decimal point?
 The upper (integral) bits determine the entry in the sine table, the
 lower (fractional) bits track the position between entries. In theory
 the fractional bits could be used to interpolate between two table
-entries, this could greatly increase the accuracy of the result. Though
+entries, this could increase the accuracy of the result. Though
 interpolation typically requires multiplication and that's likely too
 expensive for the YM2413 hardware implementation. So for now I'll assume
 the YM2413 doesn't interpolate. Instead it directly uses the upper 10
 bits as the entry position (actually the upper 2 bits 'mirror' the table
-lookup and the next 8 bits are used as the actual index).
+lookup and only the next 8 bits are used as the actual table index).
 
 So again, how many fractional bits are there? To figure this out I did
 the following experiment: play a sine wave (exact shape doesn't matter)
@@ -85,8 +85,8 @@ following table:
       1     1     4   |   64     |     8     |
       1     1     8   |   32     |    16     |
 
-The first 3 columns are the input parameters of the experiments, the
-#repeats column is the measured result and the step-size column is a
+The first 3 columns are the input parameters of the experiments. The
+#repeats column is the measured result. And the step-size column is a
 calculated value (more on this column below).
 
 The table shows the following 'interesting' data points:
@@ -95,9 +95,9 @@ The table shows the following 'interesting' data points:
  #2 ML=0,block=0,fnum=1 is the only additional combination that also
     results in a non-changing phase. (Side note: the phase keeps it's
     current value, it's not reset to zero or something).
- #3 For fnum=3 I recorded a fractional value in the table. E.g for
+ #3 For fnum=3 I recorded fractional values in the table. E.g for
     ML=0,block=1,fnum=3 I measured lengths 171,171,170 for 3 successive
-    segments (and the pattern repeats every 3 segments). I summarized
+    segments (and that pattern repeats every 3 segments). I summarized
     that as 170.67.
  #4 The only odd result for fnum=3 occurs when ML=0,block=0. This does
     not result in a fractional value.
@@ -126,7 +126,7 @@ To check this formula let's use it to predict the measured values:
 #repeats should be the reciprocal of the step-size. Or expressed
 in 9-bit fixed-point:
    #repeats = 512 / step-size
-This matches exactly.
+This matches exactly the measurements.
 
 Let's revisit the earlier remarks:
  #1 When fnum=0 the formula always evaluates to step-size=0. And that
@@ -139,10 +139,60 @@ Let's revisit the earlier remarks:
     same value as for ML=0,block=0,fnum=2. (We again loose one bit
     because of the '>> 1' operation).
 
+
 What about overflow? If we pick the values ML=15,block=7,fnum=511 (the
 maximum values) our formula predicts step-size = 981120 (0xEF880). But
 that doesn't fit in 19 bits.
-  TODO
+
+Let's repeat the above experiment, but now for high frequency settings.
+Instead of measuring the equal-value-segment-length, we now measure the
+length of one full sine period:
+
+      ML  block  fnum | period-len | step-size | remarks
+    ------------------+------------+-----------+----------
+      0     0    256  |   4096     |  0x00080  |
+      0     1    256  |   2048     |  0x00100  |
+      0     2    256  |   1024     |  0x00200  |
+      0     3    256  |    512     |  0x00400  |
+      0     4    256  |    256     |  0x00800  |
+      0     5    256  |    128     |  0x01000  |
+      0     6    256  |     64     |  0x02000  |
+      0     7    256  |     32     |  0x04000  |
+    - - - - - - - - - | - - - - - -| - - - - - | - - - -
+      1     7    256  |     16     |  0x08000  |
+      2     7    256  |      8     |  0x10000  |
+      3     7    256  |      5.33  |  0x18000  |
+      4     7    256  |      4     |  0x20000  |
+      5     7    256  |      3.2   |  0x28000  |
+      6     7    256  |      2.67  |  0x30000  |
+      7     7    256  |      2.29  |  0x38000  |
+      8     7    256  |      2     |  0x40000  | #5
+      9     7    256  |     ---    |  0x48000  | #6
+    - - - - - - - - - | - - - - - -| - - - - - | - - - -
+     15     7    511  |  +/- 7.77  |  0xEF880  | #7
+                      |            | =0x6F880  |
+
+As before the first 3 columns are the input parameters, the period-len
+column is the measured result and the step-size column contains our
+predicted value.
+
+Only the really high values are interesting:
+ #5 For ML=8 block=7 fnum=256 the YM2413 output alternated between only
+    two values (not 100% true because the effect of the modulator could
+    not be fully disabled). This means step-size is indeed 0x40000. So
+    step-size can span the full 19-bit range.
+ #6 This setting is above the Nyquist frequency. We're talking larger
+    steps through the sine-table than half the period. So it appears the
+    sine is going backwards at a lower frequency. This particular value
+    was hard to measure (hard to count the period-length) so I didn't
+    bother.
+ #7 Our formula predicts a step-size=0xEF880, though that requires 20
+    bits. But actually the extra bit doesn't matter, when adding it to
+    the 19-bit phase counter that extra bit anyway doesn't contribute
+    anything. For this combination I could measure the period length,
+    and it does match the predicted value (when taking frequency
+    aliasing into account, because also here we're above Nyquist).
+This all means we can ignore overflow in the step-size calculation.
 
 
 So the conclusion (so far):
@@ -154,16 +204,17 @@ Though the phase is _also_ influenced by:
  - The vibrato-bit of the modulator/carrier in the instrument settings.
  - Phase modulation of carrier by modulator.
  - Feedback in the modulator.
-In this experiment I disabled these 3 influences. Later we'll possibly
-have to extend the step-size formula to take these into account.
+In this experiment I disabled these 3 influences (or as much as
+possible). Later we'll possibly have to extend the step-size formula to
+take these effects into account.
 
 
 
 * die-shot
 
 From time-to-time I look at the YM2413 die-shot:
-  http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
-and this time I was actually able to find a feature in the die-shot that
+    http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
+This time I was actually able to find a feature in the die-shot that
 supports the conclusion of this post: there really seem to be 19 bits
 allocated to the phase counter(s).
 
@@ -171,8 +222,8 @@ In the large rectangle in the top-right corner you can see 19 horizontal
 bands. In the left part of that rectangle you see a region that has much
 less (vertical) wires going across the bands. If you look very closely
 to the band(s) in that region you see features that (horizontally)
-repeat 18 times.
-  [image: TODO]
+repeat 18 times. (Look at the link above for a zoomable image).
+  [image: die-phase-counters.jpg]
 That region contains 19 chains of 18 flip-flops. Each flip-flop stores a
 single bit. There are 19 bands next to each other, combined they form a
 19-bit value. There are 18 flip-flops in a chain, that's one
@@ -196,20 +247,20 @@ logic present in the loop, this is likely the step-size adder.
 
 * OPL3 reverse engineering forum
 
-A couple of days ago (after I had already finished my experiments for
+A couple of days ago (after I had already finished most experiments for
 this post) I discovered this forum:
     http://forums.submarine.org.uk/phpBB/
-The main focus in this forum is the OPL3, but there's a little info on
-the OPL2 as well. And YM2413 (OPLL) is an OPL2 derivative (so closer to
-OPL2 than to OPL3). For this post the following forum-topic is the most
+The main focus in that forum is the OPL3, but there's a little info on
+the OPL2 as well. (YM2413 (OPLL) is an OPL2 derivative, so closer to OPL2
+than to OPL3). For this post the following forum-topic is the most
 relevant:
-  Yamaha OPL-3 research > Phase Generator
+    Yamaha OPL-3 research > Phase Generator
 
 The information there seems to match, more or less, with my findings.
 There's one important difference:
-  OPL3 uses a 10.10 bit fixed-point phase-counter
-  OPLL uses a 10.9  bit fixed-point phase-counter
+    OPL3 uses a 10.10 bit fixed-point phase-counter
+    OPLL uses a 10.9  bit fixed-point phase-counter
 Though also
-  OPL3 has 10 bits for fnum
-  OPLL has  9 bits for fnum
+    OPL3 has 10 bits for fnum
+    OPLL has  9 bits for fnum
 So from that point of view the results match again.

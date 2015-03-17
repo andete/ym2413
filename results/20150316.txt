@@ -1,37 +1,215 @@
-  ML  block  fnum  #repeats
---------------------------
-  0     0     0     inf
-  0     0     1     inf
-  0     0     2     512
-  0     0     3     512
-  0     0     4     256
-  0     0     8     128
- - - - - - - - - - - - - -
-  0     1     0     inf
-  0     1     1     512
-  0     1     2     256
-  0     1     3     170.67
-  0     1     4     128
-  0     1     8      64
- - - - - - - - - - - - - -
-  0     2     0     inf
-  0     2     1     256
-  0     2     2     128
-  0     2     3      85.33
-  0     2     4      64
-  0     2     8      32
- - - - - - - - - - - - - -
-  1     0     0     inf
-  1     0     1     512
-  1     0     2     256
-  1     0     3     170.67
-  1     0     4     128
-  1     0     8      64
- - - - - - - - - - - - - -
-  1     1     0     inf
-  1     1     1     256
-  1     1     2     128
-  1     1     3      85.33
-  1     1     4      64
-  1     1     8      32
+* phase-counter
 
+In the previous post we figured out the resolution of the sine table. To
+do this we choose 'special' values (powers-of-2) for the channel
+frequency (fnum+block+ML) and looked at 'flat' regions in the output.
+E.g. near zero where the sine wave is rising/falling the fastest, we
+still saw multiple successive equal output values (because the sine
+table only has 1024 entries and the chosen frequency was low enough to
+require more than 1024 steps per period).
+
+In this post we'll use the same technique to figure out more details
+about the internal phase calculations. Phase or phase-counter here means
+the 'position' in the sine wave.
+
+When setting non-power-of-two fnum values we see that the step-size
+through the sine table is not always the same for successive samples.
+E.g. the same entry might sometimes repeat 5x sometimes 6x (for lower
+frequencies) or for each sample we skip ahead sometimes 7 sometimes 8
+entries in the table (for higher frequencies). This can easily be
+explained by assuming fixed-point arithmetic. So instead of only having
+a 10 bit phase counter (for 1024 entries) we have some additional
+fractional bits.
+
+Fixed-point calculations are very cheap, both in software and (even
+more) in hardware. Most (all?) YM2413 emulators also perform the phase
+calculations in fixed-point. But not all emulator code agrees on the
+number of bits before and after the decimal point. From the previous
+post we know there are 10 bits before, but how many bits are there after
+the decimal point?
+
+The upper (integral) bits determine the entry in the sine table, the
+lower (fractional) bits track the position between entries. In theory
+the fractional bits could be used to interpolate between two table
+entries, this could greatly increase the accuracy of the result. Though
+interpolation typically requires multiplication and that's likely too
+expensive for the YM2413 hardware implementation. So for now I'll assume
+the YM2413 doesn't interpolate. Instead it directly uses the upper 10
+bits as the entry position (actually the upper 2 bits 'mirror' the table
+lookup and the next 8 bits are used as the actual index).
+
+So again, how many fractional bits are there? To figure this out I did
+the following experiment: play a sine wave (exact shape doesn't matter)
+at various different settings for:
+    instrument-car.ML
+    channel-block
+    channel-fnum
+For each combination capture the output and measure the length of 'flat'
+segments (the number of consecutive equal-value outputs). This gives the
+following table:
+
+      ML  block  fnum | #repeats | step-size | remarks
+    ------------------+----------+-----------+----------
+      0     0     0   |  inf     |     0     |  #1
+      0     0     1   |  inf     |     0     |  #2
+      0     0     2   |  512     |     1     |
+      0     0     3   |  512     |     1     |  #4
+      0     0     4   |  256     |     2     |
+      0     0     8   |  128     |     4     |
+    - - - - - - - - - | - - - - -| - - - - - | - - - -
+      0     1     0   |  inf     |     0     |  #1
+      0     1     1   |  512     |     1     |
+      0     1     2   |  256     |     2     |
+      0     1     3   |  170.67  |     3     |  #3
+      0     1     4   |  128     |     4     |
+      0     1     8   |   64     |     8     |
+    - - - - - - - - - | - - - - -| - - - - - | - - - -
+      0     2     0   |  inf     |     0     |  #1
+      0     2     1   |  256     |     2     |
+      0     2     2   |  128     |     4     |
+      0     2     3   |   85.33  |     6     |  #3
+      0     2     4   |   64     |     8     |
+      0     2     8   |   32     |    16     |
+    - - - - - - - - - | - - - - -| - - - - - | - - - -
+      1     0     0   |  inf     |     0     |  #1
+      1     0     1   |  512     |     1     |
+      1     0     2   |  256     |     2     |
+      1     0     3   |  170.67  |     3     |  #3
+      1     0     4   |  128     |     4     |
+      1     0     8   |   64     |     8     |
+    - - - - - - - - - | - - - - -| - - - - - | - - - -
+      1     1     0   |  inf     |     0     |  #1
+      1     1     1   |  256     |     2     |
+      1     1     2   |  128     |     4     |
+      1     1     3   |   85.33  |     6     |  #3
+      1     1     4   |   64     |     8     |
+      1     1     8   |   32     |    16     |
+
+The first 3 columns are the input parameters of the experiments, the
+#repeats column is the measured result and the step-size column is a
+calculated value (more on this column below).
+
+The table shows the following 'interesting' data points:
+ #1 Whenever fnum=0 the phase doesn't change, resulting in an infinite
+    segment length.
+ #2 ML=0,block=0,fnum=1 is the only additional combination that also
+    results in a non-changing phase. (Side note: the phase keeps it's
+    current value, it's not reset to zero or something).
+ #3 For fnum=3 I recorded a fractional value in the table. E.g for
+    ML=0,block=1,fnum=3 I measured lengths 171,171,170 for 3 successive
+    segments (and the pattern repeats every 3 segments). I summarized
+    that as 170.67.
+ #4 The only odd result for fnum=3 occurs when ML=0,block=0. This does
+    not result in a fractional value.
+
+If we ignore ML=0,block=0 for now, the pattern seems to be
+   #repeats for ML=x,block=y,fnum=*z*
+       is equal to
+   #repeats for ML=x,block=y,fnum=*1* divided by *z*
+
+The highest value in the #repeats column is 512. All other values in
+that column can be expressed as 512/n with n an integer. This suggests
+the fixed-point phase-counter has 9 fractional bits.
+
+Let's assume the formula
+    step-size = ((fnum * mlTab[ML]) << block) >> 1
+ with
+    mlTab = {1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30}
+    (same table as listed in the datasheet, but each value doubled)
+
+The result of this formula is shown in the 'step-size' column. This
+value must be interpreted as a fixed-point value with 9 fractional bits
+(roughly speaking, you get the equivalent mathematical value by dividing
+the number by 512).
+
+To check this formula let's use it to predict the measured values:
+#repeats should be the reciprocal of the step-size. Or expressed
+in 9-bit fixed-point:
+   #repeats = 512 / step-size
+This matches exactly.
+
+Let's revisit the earlier remarks:
+ #1 When fnum=0 the formula always evaluates to step-size=0. And that
+    indeed results in an infinite segment length.
+ #2 For ML=0,block=0,fnum=1 the formula still evaluates to step-size=0.
+    (Because of the '>> 1' operation in the formula we loose one bit).
+ #3 For fnum=3 (or any non-power-of-two) 512/fnum indeed results in a
+    fractional value.
+ #4 For ML=0,block=0,fnum=3 step-size evaluates to 1, this is indeed the
+    same value as for ML=0,block=0,fnum=2. (We again loose one bit
+    because of the '>> 1' operation).
+
+What about overflow? If we pick the values ML=15,block=7,fnum=511 (the
+maximum values) our formula predicts step-size = 981120 (0xEF880). But
+that doesn't fit in 19 bits.
+  TODO
+
+
+So the conclusion (so far):
+ - Phase-counter is a 10.9-fixed-point counter.
+ - Each sample the phase-counter is increased by a value
+     step-size = ((fnum * mlTab[ML]) << block) >> 1
+
+Though the phase is _also_ influenced by:
+ - The vibrato-bit of the modulator/carrier in the instrument settings.
+ - Phase modulation of carrier by modulator.
+ - Feedback in the modulator.
+In this experiment I disabled these 3 influences. Later we'll possibly
+have to extend the step-size formula to take these into account.
+
+
+
+* die-shot
+
+From time-to-time I look at the YM2413 die-shot:
+  http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
+and this time I was actually able to find a feature in the die-shot that
+supports the conclusion of this post: there really seem to be 19 bits
+allocated to the phase counter(s).
+
+In the large rectangle in the top-right corner you can see 19 horizontal
+bands. In the left part of that rectangle you see a region that has much
+less (vertical) wires going across the bands. If you look very closely
+to the band(s) in that region you see features that (horizontally)
+repeat 18 times.
+  [image: TODO]
+That region contains 19 chains of 18 flip-flops. Each flip-flop stores a
+single bit. There are 19 bands next to each other, combined they form a
+19-bit value. There are 18 flip-flops in a chain, that's one
+phase-counter for each of the 18 operators (9 modulators and 9
+carriers). We also see that (only) the upper 10 of the 19 flip-flops are
+routed further to a (relatively small) block of logic (that performs
+mirroring depending on the upper two bits?) and the output of that logic
+is further routed to a ROM (the sine-table).
+
+The YM2413 only has the hardware to do one 'operator-calculation'
+(modulator or carrier) at a time. This means that the data required for
+such a calculation somehow has to be routed to that operator logic. A
+chain of flip-flops is one such possibility: (only) the bits at the head
+of the chain are used, the other bits are waiting in line (literally).
+You can also see some wires that connect the head of each chain back to
+the tail. Those connections close the circle so that the same value
+comes back every 18 'cycles'. Actually there still is a bit of extra
+logic present in the loop, this is likely the step-size adder.
+
+
+
+* OPL3 reverse engineering forum
+
+A couple of days ago (after I had already finished my experiments for
+this post) I discovered this forum:
+    http://forums.submarine.org.uk/phpBB/
+The main focus in this forum is the OPL3, but there's a little info on
+the OPL2 as well. And YM2413 (OPLL) is an OPL2 derivative (so closer to
+OPL2 than to OPL3). For this post the following forum-topic is the most
+relevant:
+  Yamaha OPL-3 research > Phase Generator
+
+The information there seems to match, more or less, with my findings.
+There's one important difference:
+  OPL3 uses a 10.10 bit fixed-point phase-counter
+  OPLL uses a 10.9  bit fixed-point phase-counter
+Though also
+  OPL3 has 10 bits for fnum
+  OPLL has  9 bits for fnum
+So from that point of view the results match again.

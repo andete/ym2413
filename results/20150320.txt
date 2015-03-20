@@ -1,33 +1,36 @@
 In this post I'll look at the YM2413 envelope generator (EG). The EG has
-4 phases attack, decay, sustain and release (sometimes referred to as
-ADSR envelope). More specifically, in this post I'll look at the decay
-and release part. I'll leave the attack part for later because it's more
-difficult. The sustain part is trivial (envelope level remains constant)
-I won't discuss that either.
+4 phases: attack, decay, sustain and release (sometimes referred to as
+ADSR-envelopes). More specifically, in this post I'll look at the decay
+and release part. In fact release behaves the same as decay, so I'll
+only discuss decay. I'll leave the attack part for later because it's
+more difficult. The sustain part is trivial (envelope level remains
+constant) I won't discuss that either.
 
 
 
 * Envelope-Generator Decay-Rate levels
 
 To start this experiment I manually tweaked the instrument/channel
-parameters till I got a 'nice' result (I'll explain in a bit what I mean
-with 'nice'). I settled on these settings:
+parameters till I got a 'nice' looking waveform (I'll explain in a bit
+what I mean with 'nice'). I came up with these settings:
 
 mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=15 SL=00 RR=15}
 car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=15 DR=03 SL=15 RR=05}
-reg#0x20 = 0x00    key-off
-reg#0x10 = 0x00    fnum-low=0
-reg#0x30 = 0x00    max volume / custom instrument
-reg#0x20 = 0x19    key-on / block=4 / fnum=256
+  reg#0x20 = 0x00    key-off
+  reg#0x10 = 0x00    fnum-low=0
+  reg#0x30 = 0x00    max volume / custom instrument
+  reg#0x20 = 0x19    key-on / block=4 / fnum=256
+Note that the 'key-on' bit is first set to 0 then to 1, this makes sure
+we re-trigger the ADSR phases.
 
-This generates the following waveform:
+These settings result in the following waveform:
   [image: env-dr3.png]
 
 As expected the envelope of the wave goes down exponentially. In a
-log-scale it goes down linearly, and as we'll see that's also how the
-YM2413 implements this.
+log-scale it goes down linearly (not shown), and as we'll see that's
+also how the YM2413 implements the envelopes.
 
-If we zoom in at the top region (marked in green), we get this:
+If we zoom-in at the top region (marked in green), we see this:
   [image: env-dr3-zoom-front.png]
 
 We want to measure the EG levels (y-axis), though the YM2413 output
@@ -43,39 +46,41 @@ So a 'nice' signal means:
                   amplitude region in the sine-table
  * Pick decay rate (DR) 'just right':
     -> too high -> we skip over the maximum amplitude
-    -> too low -> not really a problem, but measurement takes very long
+    -> too low -> not really a problem, but measurements takes very long
 
 In the zoomed image you see that for each EG segment we have at least 4
 peaks where the sine wave reaches max amplitude. 1 peak might also work,
 but 4 allows to double check (in case of noise).
 
-Note that we picked SL=15 (the maximum value). This means the EG will go
-down to -45dB. This is not the full YM2413 range which is -48dB.
+Note that we picked SL=15 (the maximum value). This means the EG will
+only go down to -45dB. This is not the full YM2413 range which is -48dB.
 
-The next two images zoom in near the tail (the region marked in red in
-the full image):
+The next two images zoom-in near the tail of the waveform (the region
+marked in red in the full image):
   [image: env-dr3-zoom-back1.png]
   [image: env-dr3-zoom-back2.png]
 
 The first of these two shows the location where signal just goes to
 lowest amplitude, after this point it only takes on the values +1, +0,
--0, -1. The second images is located much further to the end where the
-envelope has stabilized. It uses the same 4 output levels, but if you
-look closely the shape is not the same (in an earlier post we had a
-similar situation for volume=14 vs volume=15). Unfortunately that means
-that figuring out the number of EG steps is not as simple as counting
-the number of plateaus in the waveform.
+-0, -1 anymore. The second images is located much further to the end
+where the envelope has stabilized (so where we reached -45dB). It uses
+the same 4 output levels. But if you look closely the shape is not the
+same (in an earlier post we had a similar situation for volume=14 vs
+volume=15). Unfortunately this means that figuring out the number of EG
+steps is not as simple as counting the number of plateaus in the
+waveform.
 
 To investigate this further I wrote a program that takes the waveform as
 input and:
   - Detects changes in the EG level (to do this is looks for local
     maxima, then it looks for (abrupt) changes in successive maxima).
   - It prints both the amplitude and the position of these changes.
-    (Note that amplitudes are reported in DAC values instead of
-    converting to YM2413 values, I found this to be more robust against
-    measurement noise).
+    (Note that amplitudes are in DAC values instead of converting them
+    to YM2413 values, I found this to be more robust against measurement
+    noise).
   - It also prints the difference in position compared to the previous
     change.
+The result is shown in the following table:
 
         x      y    delta-x
     -----------------------
@@ -159,29 +164,28 @@ input and:
     152572   32877  12288
 
 The upper part of this table is very regular, delta-x always repeats the
-pattern [1024 1024 2048] (this pattern will be explained in the second
-part of this post).
+same pattern: 1024 1024 2048 (this pattern will be explained in the
+second part of this post).
 
 Starting from x=84988 the pattern breaks. Though at that point, when
-translated to YM2413 levels, the difference in amplitude is only 1
-level. So there simply cannot be a level in between. At least my program
-cannot detect such 'in between' levels. When visually inspecting the
-waveform around x=83964 I indeed see a change in waveform 'shape' (I've
-not created a picture of it, but it's similar to the two pictures of the
-tail above). So it's reasonable to assume that the pattern [1024 1024
-2048] simply keeps on repeating till the end.
+translated to YM2413 output levels, the difference in amplitude is only
+1 level. So there simply cannot be a level in between. Or at least my
+program cannot detect such 'in between' levels. When visually inspecting
+the waveform around x=83964 I indeed saw a change in waveform 'shape'
+(I've not created a picture of it, but it's similar to the two pictures
+of the tail above). So it's reasonable to assume that the pattern '1024
+1024 2048' simply keeps on repeating till the end.
 
 The changes in waveform-shape are very subtle, but as far as I can tell
 the waveform _really_ stops changing at (about) x=162474. That
-corresponds to 120 different EG levels. Remember that we set car.SL=15
-(means decay from 0dB to -45dB). If we extrapolate to the full range
-(0dB to -48dB) there would be 128 EG steps, and that's a nice 'round'
-number.
+corresponds to 120 different EG levels (found by following the '1024
+1024 2048' pattern). Remember that we set car.SL=15 (means decay from
+0dB to -45dB). If we extrapolate to the full range (0dB to -48dB) there
+would be 128 EG steps, and that's a nice 'round' number.
 
 The YM2413 datasheet mentions EG goes in steps of 0.325dB. Instead we
 measured 48dB/128 = 0.375dB. So I assume the value in the datasheet is a
-typo (as we'll see below there are likely more such typos in the
-datasheet).
+typo (as we'll see below there are more such typos in the datasheet).
 
 
 
@@ -218,24 +222,24 @@ The first and last rows are special (rate 0..3 show no decay, rates
 60..63 have the same value). The other rows have the following
 structure:
  * The values in row N+1 are equal to the values in row N divided by 2.
- * The values in column +1 are approx equal to column +0 times 4/5(*)
- * The values in column +2 are approx equal to column +0 times 4/6(*)
- * The values in column +2 are approx equal to column +0 times 4/7(*)
-    (*) More accurate values for the column-ratios are
-        102/127, 85/127, 73/127
+ * The values in column +1 are approx equal to column +0 times 4/5(*).
+ * The values in column +2 are approx equal to column +0 times 4/6(*).
+ * The values in column +2 are approx equal to column +0 times 4/7(*).
+    (*) More accurate values for the column-ratios are:
+        102/127, 85/127, 73/127.
 
 The values in the table are listed in milliseconds. When expressed in
 multiples of the YM2413 sample duration (sample-rate = 3579545MHz/72) it
 shows even more structure. I won't show such a transformed table.
 Instead I'll give a program that can reconstruct the original table.
 
-    double c = 72.0 / 3579545.0 * 1000; // duration of 1 sample in ms
+    double dur = 72.0 / 3579545.0 * 1000; // duration of 1 sample in ms
     for (int i = 4; i < 64; ++i) {
         int s[4] = {127, 102, 85, 73};
-        int t = (i < 60)
-              ? (1 << (14 - (i / 4))) * s[i & 3]
-              : 63;
-        cout << t * c << endl;
+        int cycles = (i < 60)
+                   ? (1 << (14 - (i / 4))) * s[i & 3]
+                   : 63;
+        cout << cycles * dur << endl;
     }
 
 And the corresponding generated table:
@@ -259,14 +263,14 @@ And the corresponding generated table:
      56 |      2.55451     2.05166     1.70971     1.46834
      60 |      1.26720     1.26720     1.26720     1.26720
 
-By properly rounding these values we can perfectly reproduce the values
-from the datasheet. (Initially there were some discrepancies, but these
-all turned out to be transcription errors from a not always very
-readable scan, so single-digit errors like 0<->8 or 2<->7).
+By properly rounding these values we can almost perfectly reproduce the
+values from the datasheet. (Initially there were some discrepancies, but
+these all turned out to be transcription errors from a not always very
+readable scanned document, so single-digit errors like 0<->8 or 2<->7).
 
-So now we have a formula for the decay rate timing, but what do these
+So now we have a formula for the decay rate timing. But what do these
 numbers mean exactly? How can we translate these numbers to changes in
-envelope level?
+the envelope level?
 
 From the previous section we know there are 128 envelope levels. So in a
 way the only remaining question we need to answer is: When does the
@@ -274,72 +278,110 @@ envelope generator switch from one level to the next?
 
 I didn't figure this out myself, instead I read existing OPLx emulation
 code (YM2413Burczynski.cc and YMF262.cc in the openMSX source) and only
-confirmed that my measurements match the structure of those algorithms
+confirmed that the measurements match the structure of those algorithms
 (some of the parameters in the YM2413Burczynski code turned out to be
 wrong: Burczynski seems to use 256 levels, but we measured only 128
 levels (though OPL2 and OPL3 have steps of 0.1875dB in the envelope
-generator and also a range of 0-96dB, maybe that can explain the
+generator (and also a wider range of 0-96dB), maybe that can explain the
 mistake)).
 
 So at each sample for each operator we need to decide whether to go to
 the next envelope level or not. The algorithm goes like this:
  * Depending on the {mod,car},{DR,RR,KSR} and channel.{fnum,block}
    settings we calculate an effective RATE (the formula is given in the
-   datasheet). This results in a number between 0 and 63 (this is the
-   index from the decay-rate tables above).
+   datasheet). This results in a number between 0 and 63 (this is also
+   the index in the decay-rate tables above).
  * Rates 0..3 and 60..63 are special:
-     0.. 3: never go to the next EG level
+     0.. 3: never advance to the next EG level
     60..63: always advance 2 EG levels
- * For the other levels we calculate 2 parameters (names taken from the
-   YM2413Burczynski source code):
-    eg_shift = 13 - (rate / 4)             ********** TODO check this
-      for rates 56..59 (i/4 == 14) eg_shift=0
-    eg_select = rate & 3
+ * For the other levels we calculate 2 parameters (parameter names taken
+   from the YM2413Burczynski source code):
+       eg_shift = ((rate / 4) == 14)
+                ? 0
+                : 13 - (rate / 4)
+       eg_select = rate & 3
  * 'eg_select' selects between 4 small tables:
        {0,1,0,1,0,1,0,1} //  4 out of 8
        {0,1,0,1,1,1,0,1} //  5 out of 8
        {0,1,1,1,0,1,1,1} //  6 out of 8
        {0,1,1,1,1,1,1,1} //  7 out of 8
-    though for rates 56..59 the tables are:
+    though for rates 56..59 (rate/4 == 14) the tables are:
        {1,1,1,1,1,1,1,1} //  8 out of 8
        {1,1,1,2,1,1,1,2} // 10 out of 8
        {1,2,1,2,1,2,1,2} // 12 out of 8
        {1,2,2,2,1,2,2,2} // 14 out of 8
  * There is one global counter (shared among the 18 operators), each
-   sample that counter is increased by one.
+   sample that counter is increased by one. (The same counter is also
+   used for other stuff, hopefully I can confirm that in future posts).
  * For each operator we shift that global counter right over 'eg_shift'
-   bits. Only if all the bits that were shifted out are zero execute the
-   next step. (Side note: an alternative mechanism that may or may not
-   be cheaper in hardware is to look at the carry-in bits from
-   incrementing the global counter). So for example if 'eg_shift=4', we
-   only execute the next step once in every 1<<4=16 iterations.
+   bits. Only if all the bits that were shifted out are zero we execute
+   the next step. (Side note: an alternative mechanism that may or may
+   not be cheaper in hardware is to look at the carry-in bits from
+   incrementing the global counter, or check whether the n-th bit
+   changed after the increment). So for example if 'eg_shift=4', we only
+   execute the next step once in every 1<<4 = 16 iterations.
  * We take the lower 3 bits of the shifted global counter and use that
    as an index in the 'eg_select' table. Then add the value from the
-   table to the current EG level (the table may contain 0).
+   table to the current EG level (note that the table may contain 0).
 
    An example: for RATE=8, in this step, we only go 4 out of 8 times to
    the next level. For rates 9, 10 and 11 that's respectively 5/8, 6/8
    and 7/8. If we follow this sequence we'd expect 8 out of 8 for RATE=12,
-   instead we have again 4/8. But because eg_shift is one less for
+   instead we again have 4/8. But because eg_shift is one less for
    RATE=12 compared to RATE=8 this step triggers twice as often and we
    effectively get 8/8.
 
-I confirmed this algorithm for the rates:
-  14
-TODO
- 0, 1, 4, 9, (14), 19, 52, 56,57,58,59
-
+Another example: the waveform shown in the pictures above uses RATE=14.
+For that rate we have eg_shift=10 and use the table {0,1,1,1,0,1,1,1}.
+eg_shift=10 means we only advance every 1024 samples. The table means we
+only advance 3 out 4 times (=6/8). So combined this means that the
+distance between moving to the next EG level is in sequence 2048, 1024
+and 1024 samples. And this is exactly what we measured.
 
 Note that because of the global counter, the transition from the very
 first EG level (level 0) to the next level typically triggers faster
 than the transitions to the other levels (because the global counter is
-likely not zero when the decay phase starts).
+likely not zero when the decay phase starts). I didn't mention it
+before, but in the zoomed image above you can indeed see that the first
+EG-segment only has 3 peaks while all the others have 4 or 2x4 peaks.
+
+So I confirmed this algorithm for rate=14 (see images above), but also
+for these (though I didn't include images):
+ 0,1,2,3 -> ***TODO*** expect no transitions
+ 4       -> ***TODO*** expect 8192
+ 9       -> ***TODO*** expect 4096,4096,2048,2048,4096
+ 19      -> ***TODO*** expect 1024,512,512,512,512,512,512
+ 52      -> ***TODO*** expect 2
+ 53      -> ***TODO*** expect 2,2,1,1,2
+ 54      -> ***TODO*** expect 2,1,1
+ 55      -> ***TODO*** expect 2,1,1,1,1,1,1
+ 56,57,58,59 -> ***TODO*** expect 1
 
 
-I'm glad that also this time I found a feature on the YM2413 die shot
-that supports the findings in this post:
+
+
+* die-shot
+
+I again looked at the YM2413 die-shot:
+    http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
+And I'm glad that also this time I found a feature that supports the
+findings in this post:
   [image: die-envelope-levels.jpg]
--> global counter confirmed by die shot -> there doesn't seem to be any
-structure that holds 18x envelope-counters
--> found 18x7-bit structure
 
+Use the die-shot link to zoom-in on the region marked in red in this
+(small) picture. You'll find an array of 7 chains of 18 flip-flops. That
+is 18 times a 7-bit value. Or for each of the 18 operators a 7-bit
+EG-level value. The output of those flip-flop-chains also seems to be
+routed to some small logic block (an adder?) and then further routed to
+the input of the exp-table-ROM. That's exactly what you'd expect for the
+EG-level values.
+
+The die-shot also, more or less, confirms the global shared counter
+approach. At least we do _not_ see any array of 18x(13+3) bits, such an
+array would be required to give each operator it's own counter.
+
+There is a yet-unknown array of 18x12 bits (located in the top-middle
+rectangle). My current best *guess* is that this is related to the
+phase-modulation calculations. At least the YM2413 emulators seem to
+require extra storage for this (carried from one iteration to the next).
+Hopefully I can tell more about this in the future.

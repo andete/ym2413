@@ -16,21 +16,22 @@ what I mean with 'nice'). I came up with these settings:
 
 mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=15 SL=00 RR=15}
 car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=15 DR=03 SL=15 RR=05}
-  reg#0x20 = 0x00    key-off
-  reg#0x10 = 0x00    fnum-low=0
-  reg#0x30 = 0x00    max volume / custom instrument
-  reg#0x20 = 0x19    key-on / block=4 / fnum=256
+    reg#0x20 = 0x00    key-off
+    reg#0x10 = 0x00    fnum-low=0
+    reg#0x30 = 0x00    max volume / custom instrument
+    reg#0x20 = 0x19    key-on / block=4 / fnum=256
 Note that the 'key-on' bit is first set to 0 then to 1, this makes sure
 we re-trigger the ADSR phases.
 
 These settings result in the following waveform:
   [image: env-dr3.png]
 
-As expected the envelope of the wave goes down exponentially. In a
-log-scale it goes down linearly (not shown), and as we'll see that's
-also how the YM2413 implements the envelopes.
+As expected the envelope of the wave goes down exponentially. When
+plotted in a logarithmic scale (not shown) it goes down linearly, and as
+we'll see that's also how the YM2413 implements the envelopes.
 
-If we zoom-in at the top region (marked in green), we see this:
+If we zoom-in at the top region (the rectangle marked in green), we see
+this:
   [image: env-dr3-zoom-front.png]
 
 We want to measure the EG levels (y-axis), though the YM2413 output
@@ -41,7 +42,7 @@ maximal value.
 
 So a 'nice' signal means:
  * Pick the frequency 'just right':
-    * too low -> sine doesn't hit max amplitude in each EG segment
+    * too low -> sine doesn't reach max amplitude in each EG segment
     * too high -> step-size may be too high so that we skip over the max
                   amplitude region in the sine-table
  * Pick decay rate (DR) 'just right':
@@ -55,7 +56,7 @@ but 4 allows to double check (in case of noise).
 Note that we picked SL=15 (the maximum value). This means the EG will
 only go down to -45dB. This is not the full YM2413 range which is -48dB.
 
-The next two images zoom-in near the tail of the waveform (the region
+The next two images zoom-in near the tail of the waveform (the rectangle
 marked in red in the full image):
   [image: env-dr3-zoom-back1.png]
   [image: env-dr3-zoom-back2.png]
@@ -84,7 +85,7 @@ The result is shown in the following table:
 
         x      y    delta-x
     -----------------------
-         -   60494      -
+         0   60494      -
       1020   59313   1020
       3068   58240   2048
       4092   57162   1024
@@ -178,10 +179,10 @@ of the tail above). So it's reasonable to assume that the pattern '1024
 
 The changes in waveform-shape are very subtle, but as far as I can tell
 the waveform _really_ stops changing at (about) x=162474. That
-corresponds to 120 different EG levels (found by following the '1024
-1024 2048' pattern). Remember that we set car.SL=15 (means decay from
-0dB to -45dB). If we extrapolate to the full range (0dB to -48dB) there
-would be 128 EG steps, and that's a nice 'round' number.
+corresponds to 120 different EG levels (and confirmed by following the
+'1024 1024 2048' pattern). Remember that we set car.SL=15 (means decay
+from 0dB to -45dB). If we extrapolate to the full range (0dB to -48dB)
+there would be 128 EG steps, and that's a nice 'round' number.
 
 The YM2413 datasheet mentions EG goes in steps of 0.325dB. Instead we
 measured 48dB/128 = 0.375dB. So I assume the value in the datasheet is a
@@ -226,7 +227,12 @@ structure:
  * The values in column +2 are approx equal to column +0 times 4/6(*).
  * The values in column +2 are approx equal to column +0 times 4/7(*).
     (*) More accurate values for the column-ratios are:
-        102/127, 85/127, 73/127.
+            102/127, 85/127, 73/127.
+        Side-note + looking ahead: these less nice ratios are because
+        the table lists the time needed for 127 EG transitions, if they
+        were based on 128 transitions (so if the duration of the
+        first or last level was included, then the simpler ratios would
+        be correct).
 
 The values in the table are listed in milliseconds. When expressed in
 multiples of the YM2413 sample duration (sample-rate = 3579545MHz/72) it
@@ -276,87 +282,163 @@ From the previous section we know there are 128 envelope levels. So in a
 way the only remaining question we need to answer is: When does the
 envelope generator switch from one level to the next?
 
-I didn't figure this out myself, instead I read existing OPLx emulation
-code (YM2413Burczynski.cc and YMF262.cc in the openMSX source) and only
-confirmed that the measurements match the structure of those algorithms
-(some of the parameters in the YM2413Burczynski code turned out to be
-wrong: Burczynski seems to use 256 levels, but we measured only 128
-levels (though OPL2 and OPL3 have steps of 0.1875dB in the envelope
-generator (and also a wider range of 0-96dB), maybe that can explain the
-mistake)).
+I didn't figure this out completely myself, instead I read existing OPLx
+emulation code (mostly YM2413Burczynski.cc and YMF262.cc in the openMSX
+source tree). Based on that I got a good idea of what to look for and
+then I could confirm (or reject, see below) whether the measurements
+matched the emulation algorithm.
 
 So at each sample for each operator we need to decide whether to go to
 the next envelope level or not. The algorithm goes like this:
  * Depending on the {mod,car},{DR,RR,KSR} and channel.{fnum,block}
-   settings we calculate an effective RATE (the formula is given in the
+   settings we calculate an effective-rate (the formula is given in the
    datasheet). This results in a number between 0 and 63 (this is also
    the index in the decay-rate tables above).
  * Rates 0..3 and 60..63 are special:
-     0.. 3: never advance to the next EG level
-    60..63: always advance 2 EG levels
+        0.. 3: never advance to the next EG level
+       60..63: always advance 2 EG levels
  * For the other levels we calculate 2 parameters (parameter names taken
    from the YM2413Burczynski source code):
-       eg_shift = ((rate / 4) == 14)
-                ? 0
-                : 13 - (rate / 4)
+       eg_shift = 13 - (rate / 4)
        eg_select = rate & 3
- * 'eg_select' selects between 4 small tables:
+ * 'eg_select' selects between 4 small tables (with each 8 entries):
        {0,1,0,1,0,1,0,1} //  4 out of 8
        {0,1,0,1,1,1,0,1} //  5 out of 8
        {0,1,1,1,0,1,1,1} //  6 out of 8
        {0,1,1,1,1,1,1,1} //  7 out of 8
-    though for rates 56..59 (rate/4 == 14) the tables are:
-       {1,1,1,1,1,1,1,1} //  8 out of 8
-       {1,1,1,2,1,1,1,2} // 10 out of 8
-       {1,2,1,2,1,2,1,2} // 12 out of 8
-       {1,2,2,2,1,2,2,2} // 14 out of 8
  * There is one global counter (shared among the 18 operators), each
-   sample that counter is increased by one. (The same counter is also
-   used for other stuff, hopefully I can confirm that in future posts).
+   sample that counter is increased by one. (Side-note: the same counter
+   is also used for other stuff, hopefully I can confirm that in future
+   posts).
  * For each operator we shift that global counter right over 'eg_shift'
    bits. Only if all the bits that were shifted out are zero we execute
-   the next step. (Side note: an alternative mechanism that may or may
+   the next step. (Side-note: an alternative mechanism that may or may
    not be cheaper in hardware is to look at the carry-in bits from
    incrementing the global counter, or check whether the n-th bit
    changed after the increment). So for example if 'eg_shift=4', we only
    execute the next step once in every 1<<4 = 16 iterations.
  * We take the lower 3 bits of the shifted global counter and use that
    as an index in the 'eg_select' table. Then add the value from the
-   table to the current EG level (note that the table may contain 0).
+   table to the current EG level. Note that the table may contain 0 (so
+   we still don't advance in that case).
 
    An example: for RATE=8, in this step, we only go 4 out of 8 times to
    the next level. For rates 9, 10 and 11 that's respectively 5/8, 6/8
-   and 7/8. If we follow this sequence we'd expect 8 out of 8 for RATE=12,
-   instead we again have 4/8. But because eg_shift is one less for
-   RATE=12 compared to RATE=8 this step triggers twice as often and we
-   effectively get 8/8.
+   and 7/8. If we follow this sequence we'd expect 8 out of 8 for
+   RATE=12, instead we again use the 4/8-table. But because eg_shift is
+   one less for RATE=12 compared to RATE=8 this step triggers twice as
+   often and we effectively get 8/8.
 
-Another example: the waveform shown in the pictures above uses RATE=14.
-For that rate we have eg_shift=10 and use the table {0,1,1,1,0,1,1,1}.
-eg_shift=10 means we only advance every 1024 samples. The table means we
-only advance 3 out 4 times (=6/8). So combined this means that the
-distance between moving to the next EG level is in sequence 2048, 1024
-and 1024 samples. And this is exactly what we measured.
+Another example: the waveform shown in the pictures above has decay
+RATE=14. For that rate we have eg_shift=10 and use the table
+{0,1,1,1,0,1,1,1}. eg_shift=10 means we only advance every 1024 samples.
+The table means we only advance 3 out 4 times (=6/8). So combined this
+means that the number of samples before moving to the next EG level is
+in sequence 2048, 1024 and 1024 samples. And this is exactly what we
+measured.
 
 Note that because of the global counter, the transition from the very
 first EG level (level 0) to the next level typically triggers faster
 than the transitions to the other levels (because the global counter is
 likely not zero when the decay phase starts). I didn't mention it
 before, but in the zoomed image above you can indeed see that the first
-EG-segment only has 3 peaks while all the others have 4 or 2x4 peaks.
+EG-segment only has 3 peaks while all the others have 4 or 8 peaks.
 
-So I confirmed this algorithm for rate=14 (see images above), but also
-for these (though I didn't include images):
- 0,1,2,3 -> ***TODO*** expect no transitions
- 4       -> ***TODO*** expect 8192
- 9       -> ***TODO*** expect 4096,4096,2048,2048,4096
- 19      -> ***TODO*** expect 1024,512,512,512,512,512,512
- 52      -> ***TODO*** expect 2
- 53      -> ***TODO*** expect 2,2,1,1,2
- 54      -> ***TODO*** expect 2,1,1
- 55      -> ***TODO*** expect 2,1,1,1,1,1,1
- 56,57,58,59 -> ***TODO*** expect 1
+Side-note: one difference between the YM2413Burczynski code and the
+measurements is that the former uses 256 EG levels while we only
+measured 128 levels. This mistake might be because the YM2413Burczynski
+code is derived from OPL2/3 emulation code and those chips have double
+the EG resolution (0.1875dB per step, in addition the OPL2/3 EG range is
+0-96dB, so in total OPL2/3 have 512 EG-steps).
 
+Next to rate=14 (see the images above), I also confirmed the following
+rates using the same approach, I only had to re-tweak the parameters to
+again get a 'nice' waveform:
+     0.. 3 -> as expected: no transitions
+     4     -> as expected: 8192
+     9     -> as expected: 4096,4096,4096,2048,2048
+    14     -> as expected: 2048 1024 1024
+    19     -> as expected: 1024,512,512,512,512,512,512
+
+For the following rates I had to use a different approach. I'll first
+show the results:
+    48     -> as expected: 4
+    49     -> as expected: 4,4,4,2,2
+    50     -> as expected: 4,2,2
+    51     -> as expected: 4,2,2,2,2,2,2
+    60..63 -> as expected: increase 2 levels per step
+The envelope is changing very rapidly (only stays constant for 4 or 2
+samples), so the sine-wave-peaks approach doesn't work anymore. Instead
+I generated a waveform like this (image shows rate=49):
+  [image: env-rate49.png]
+
+Instead of having an infinitely fast attack rate (AR=15) I used a slower
+one (AR=4..7). The left part of the image shows the attack phase, the
+right part shows the decay phase. I also used a very low frequency
+(though I could only use 'fnum' for this, 'block' has an influence on
+the effective-rate so it cannot be chosen freely). The combination of AR
+and fnum is chosen so that when the attack phase finishes we're
+(approximately) at 1/4th of the sine wave. So at that point we've
+reached the 'top' of the sine and that means locally the sine wave is
+not changing too much. At least the sine-shape is changing much less
+compared to the rapid decay-rate changes. This can be seen in the
+red-encircled part in the image: at the end of the attack-phase, the
+waveform is reasonably flat, at least compared to the decay phase
+immediately right of it.
+
+The next image shows the same waveform, but zoomed-in on the decay phase
+(the green rectangle in the picture above).
+  [image: env-rate49-zoom.png]
+You clearly see (short) flat sections in this picture (this means that
+indeed the sine-shape isn't changing too much yet). You can see that
+there's a repeating pattern of 3 segments of length 4 followed by 2
+segments of length 2. And that's exactly what the above algorithm
+predicts.
+
+I measured rates 52..59 in a very similar way but now it did NOT fully
+match the predictions. The overall duration was predicted correctly, but
+not the details of the EG-level-transitions. I'll again first show the
+results:
+    52 -> as expected: 2
+    53 -> got 2,2,2,2,2,2,1,1,1,1    (expected 2,2,2,1,1)
+    54 -> got 2,2,1,1,1,1            (expected 2,1,1)
+    55 -> got 2,2,{12x1}             (expected 2,1,1,1,1,1,1)
+    56 -> as expected: 1
+    57 -> got { 4x0.5} {12x1}        (expected 0.5,1,1,1)
+    58 -> got { 4x0.5} { 4x1}        (expected 0.5,1)
+    59 -> got {12x0.5} { 4x1}        (expected 0.5,0.5,0.5,1)
+  Note: segment duration of 0.5 means EG advanced 2 steps
+
+Because this is such an unexpected result I'm including a picture of
+rate=54, so you can double check my findings:
+  [image: env-rate54-zoom.png]
+This is again zoomed-in at the decay phase. It shows 2 segments of
+length 2 followed by 4 segments of length 1. To me this is very
+unexpected because the original algorithm predicts only 1 segment of
+length 2 followed by 2 segments of length 1, and that would result in a
+much smoother curve.
+
+For rates 52..55 the above algorithm would work and would give a
+smoother result. For rates 56..59 the algorithm breaks down, because
+eg_shift is negative. The YM2413Burczynski code has a solution for that,
+but I didn't bother explaining it because the predictions are anyway
+wrong.
+
+The above algorithm can be fixed by changing to 16-entry eg_select
+tables for rates 52..59:
+    52: {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1}
+    53: {0,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1}
+    54: {0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1}
+    55: {0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1}
+    56: {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+    57: {2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1}
+    58: {2,2,2,2,1,1,1,1,2,2,2,2,1,1,1,1}
+    59: {2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1}
+These tables show _what_ is happening, but it almost certainly is not
+_how_ it is happening. I mean how it is implemented it hardware (though
+for a software implementation it might be the simplest approach). If it
+really was based on 16-entry tables then for sure the curves could be
+made smoother.
 
 
 

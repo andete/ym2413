@@ -1,0 +1,68 @@
+Let me start with the 0%-100% attack-rate table from the YM2413
+datasheet. The second table is calculated using the C-program given
+below.
+
+    RATE|    +0          +1          +2          +3
+    ----+-------------------------------------------------
+      0 |    inf         inf         inf         inf
+      4 | 1730.15     1400.60     1153.43      988.66
+      8 |  865.08      700.30      576.72      494.33
+     12 |  432.54      350.15      288.36      247.16
+     16 |  216.27      175.07      144.18      123.58
+     20 |  108.13       87.54       72.09       61.79
+     24 |   54.07       43.77       36.04       30.90
+     28 |   27.03       21.88       18.02       15.45
+     32 |   13.52       10.94        9.01        7.72
+     36 |    6.76        5.47        4.51        3.86
+     40 |    3.38        2.74        2.25        1.93
+     44 |    1.69        1.37        1.13        0.97
+     48 |    0.84        0.70        0.60        0.54
+     52 |    0.50        0.42        0.34        0.30
+     56 |    0.28        0.22        0.18        0.14
+     60 |    0.00        0.00        0.00        0.00
+
+    RATE|    +0          +1          +2          +3
+    ----+-------------------------------------------------
+      0 |    inf         inf         inf         inf
+      4 | 1730.15     1400.6      1153.43      988.657
+      8 |  865.075     700.299     576.717     494.329
+     12 |  432.538     350.15      288.358     247.164
+     16 |  216.269     175.075     144.179     123.582
+     20 |  108.134      87.5374     72.0896     61.7911
+     24 |   54.0672     43.7687     36.0448     30.8955
+     28 |   27.0336     21.8843     18.0224     15.4478
+     32 |   13.5168     10.9422      9.0112      7.72389
+     36 |    6.7584      5.47109     4.5056      3.86194
+     40 |    3.3792      2.73554     2.2528      1.93097
+     44 |    1.6896      1.36777     1.1264      0.965486
+     48 |    0.8448      0.683886    0.5632      0.482743
+     52 |    0.4224      0.341943    0.2816      0.241371
+     56 |    0.201143    0.160914    0.1408      0.120686
+     60 |    0           0           0           0
+
+    double dur = 72.0 / 3579545.0 * 1000; // duration of 1 sample in ms
+    for (int i = 4; i < 60; ++i) {
+        int s[4] = {21, 17, 14, 12};
+        int cycles = (i < 56)
+                   ? (1 << (13 - (i / 4))) * s[i & 3]
+                   : s[i & 3] / 2;
+        cout << cycles * dur << endl;
+    }
+
+Attack rates 0..3 take infinitely long. Rates 60..63 are instantaneous.
+
+Similar to the decay-rate tables, each row is half the above row, and
+there's also a fixed ratio between the values in the columns. Though for
+the higher rates (48 and above) this isn't 100% correct anymore.
+
+When expressed in YM2413 samples (49716Hz) instead of milliseconds, and
+rounded to the nearest integer, the values listed in the datasheet match
+exactly with the predicted values. At least up-to rate=48, for higher
+rates the values start to deviate.
+
+Though it's not clear what these predictions actually mean. E.g. where
+do these column-ratios {21, 17, 14, 12} come from? So let's first look
+at some pictures:
+   [ref: attack-rates.html]
+
+

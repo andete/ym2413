@@ -4,11 +4,11 @@ using namespace std;
 
 int main()
 {
-	int x = 100;
+	int x = 127;
 	cout << x << endl;
 	do {
-		//x += ~x >> 2;
-		x += ~(x-1) >> 2;
+		x += ~x >> 2;
+		//x += ~(x-1) >> 2;
 		cout << x << endl;
 	} while (x != 1);
 }

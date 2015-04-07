@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <cstdint>
+#include <set>
 
 using namespace std;
 
@@ -23,16 +24,38 @@ int16_t lookupExp(uint16_t val)
 	int t = (expTable[(val & 0xFF) ^ 0xFF] << 1) | 0x0800;
 	int result = t >> ((val & 0x7F00) >> 8);
 	if (sign) result = ~result;
+	return result / 16;
+}
+
+uint16_t lookupSin(uint16_t val)
+{
+	bool sign   = val & 512;
+	bool mirror = val & 256;
+	val &= 255;
+	uint16_t result = logsinTable[mirror ? val ^ 0xFF : val];
+	if (sign) result |= 0x8000;
 	return result;
 }
 
 int main()
 {
 	initTables();
-	for (int i = 0; i < 2048; i += 16) {
+	/*for (int i = 0; i < 2048; i += 16) {
 		int l = lookupExp(i) / 16;
 		cout << i / 16 << '\t' << i << '\t' << l << '\t' << l + 256 << endl;
+	}*/
+	set<int> S;
+	for (int i = 0; i < 1024; ++i) {
+		int16_t s = lookupSin(i);
+		S.insert(lookupExp(s));
+		cout << i;
+		     //<< '\t\ << s;
+		for (int v = 0; v < 16; ++v) {
+			cout << '\t' << lookupExp(s + 128 * v);
+		}
+		cout << endl;
 	}
+	cout << '#' << S.size() << endl;
 }
 
 // Verified that EG levels are exact (take steps of 16, divide result by 16)

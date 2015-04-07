@@ -72,7 +72,8 @@ exactly with the predicted values. At least up-to rate=48, for higher
 rates the values start to deviate.
 
 Though it's not clear what the predictions in the above table actually
-mean. E.g. where do these column-ratios "21 17 14 12" come from?
+mean. E.g. where do these column-ratios "21 17 14 12" come from? And how
+does the envelope actually change over that time period?
 
 
 * attack rate measurements
@@ -81,10 +82,10 @@ Let's first look at some pictures:
    [ref: attack-rates.html]
 
 These measurements are similar to the ones in the previous post: I
-played a sine wave but now varied channel.block and AR (instead of DR)
-to measure the different attack-rates (remember the effective-rate is a
-combination of the selected AR parameter and the frequency of the
-channel). Here are the details of the settings I've used:
+played a sine wave but now varied channel.block and car.AR (instead of
+car.DR) to measure the different attack-rates (remember the effective
+rate is a combination of the selected AR parameter and the frequency of
+the channel). Here are the details of the settings I've used:
 
 mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=15 SL=00 RR=15}
 car={AM=0 PM=0 EG=1 KR=0 ML=** KL=0       WF=0      AR=** DR=00 SL=15 RR=15}
@@ -104,7 +105,7 @@ Some observations:
   We saw the same in case of decay, and it could be explained by
   assuming a global counter.
 * When going from one row to the next, the timescale on the horizontal
-  axis halves (explained by decreasing 'eg_shift' factor).
+  axis halves (explained by decreasing the 'eg_shift' factor).
 * When going from one column to the next the detailed shape varies:
   - In column +0 all steps (except for the first and last) take equally
     long.
@@ -118,27 +119,27 @@ Some observations:
     counter.
 * There always seem to be 12 levels to go from lowest to highest
   amplitude. (In case of decay there were 128 levels).
-* These 12 levels always seem to be the same in all the pictures
-  (except for rate=4, I'll come back to this later).
+* These 12 levels always seem to be the same in all the pictures (except
+  for rate=4, I'll come back to this later).
 * For the lower rates the pictures are pretty clear, though starting
   from rate=36 it gets harder and harder to see distinct levels in the
   attack envelope. And the pictures in the last row of this table are
   almost useless.
-  That means I don't have good data for rates 44-59. In the previous
+  That means we don't have good data for rates 44-59. In the previous
   post we learned that decay rates 52-59 behaved slightly different than
-  rates 4..51, likely the same is true for the attack rates, but I don't
-  have data to confirm it. I'll have to come up with a alternative way
-  of measuring, more on this below.
+  rates 4..51, likely the same is true for the attack rates, but we
+  don't have data to confirm it. I'll have to come up with a alternative
+  way of measuring, more on this below.
 * The pictures for column +2 could likely be improved by choosing a
   different frequency, though because it won't learn us anything new I
-  didn't bother.
+  didn't bother redoing the measurements.
 
 
 * attack timing
 
-Based on the above measurements/observations we can use almost exactly
-the same algorithm as we used for decay to explain the attack rate
-timing:
+Justified by the above measurements/observations we can now use almost
+exactly the same algorithm as we used for decay to explain the attack
+rate timing:
 
 * Effective-rates 0..3 and 60..63 are special:
      0.. 3: never advance to the next EG level (same as decay)
@@ -154,7 +155,7 @@ timing:
 * There's a global counter, only when the value 'counter >> eg_shift'
   changes after the counter increased execute the next step.
 * The 3 lower bits of the shifted counter pick an entry from the
-  selected table. If that entry is '1' advance to the next EG level.
+  selected table. If that entry is '1' advance to the next attack level.
 
 As mentioned above this algorithm likely doesn't apply for rates 52..59.
 It probably needs similar changes as were done for the decay-rate,
@@ -195,16 +196,17 @@ get this:
 So for each of the 12 attack-rate levels (1st column) I measured the
 amplitude of the peaks (2nd column). Then I looked up the corresponding
 decay-EG level with the same amplitude (3rd column). Note that for low
-amplitudes there are multiple EG-levels with the same amplitude. So for
-the first few attack-steps I could only match a range of possible
-levels (I hope to also refine this measurement in the future).
+amplitudes there are multiple EG-levels that correspond with the same
+amplitude. So for the first few attack-steps I could only match a range
+of possible levels (I hope to also refine this measurement in the
+future).
 
 I couldn't see any pattern in this sequence (3rd column), so I looked at
-earlier OPL3 reverse engineering work (by 'carbon14' and 'opl3') for
+earlier OPL3 reverse engineering work by 'carbon14' and 'opl3' for
 inspiration:
   http://forums.submarine.org.uk/phpBB/viewtopic.php?f=9&t=16
-OPL3 has 512 EG steps (instead of 128). The OPL3 formula for the attack
-envelope levels seems to be:
+OPL3 has 512 EG steps (instead of 128 for YM2413). The formula for the
+OPL3 attack envelope levels is:
   start with: x = 511;
   advance: x += ~x >> 3; // Note: complement(~) instead of negate(-)
 
@@ -219,7 +221,7 @@ doesn't match exactly:
 So initially it matches pretty well, but near the end it goes too slow.
 I haven't been able yet to find a better formula.
 
-Above I mentioned that 'almost' all rates used the same 12 levels. But
+Above I mentioned that 'almost' all rates used these same 12 levels. But
 rate=4 is different (visible in the pictures if you look closely).
 Instead for rate=4 I got this sequence:
   112-127, 96-102, 73-74, 55, 41, 29, 21, 14, 10, 6, 2, 0
@@ -228,7 +230,7 @@ So also 12 steps, but slightly different levels.
 But when I repeated the measurement for rate=4 I got the same sequence
 as for all the other measurements. So likely there's nothing special
 about rate=4. The special thing is that it's the very first measurement
-I did.
+I took.
 
 When I start another measurement, I do not fully restart the YM2413
 hardware, instead I briefly set the channel to key-off and then to
@@ -252,11 +254,11 @@ I'm not sure yet what determines which sequence the attack-envelope
 follows. My best guess is that for some reason the initial EG level is
 not 127 but another value, and because of this the formula generates a
 different sequence. But I don't know yet why the initial value is
-different and I also don't know yet what the exact formula is to
-calculate the next level.
+different and I also don't know yet what the exact formula is that
+generates the sequence.
 
 In this and in the previous post we've looked at the attack and decay
-(and release) rates in isolation. We should still investigate in more
+(and release) states in isolation. We should still investigate in more
 detail what happens on the transition between the different states. But
 that's also something for later.
 
@@ -272,18 +274,15 @@ amplitude.
 I also mentioned that to be able to construct an emulation model to make
 predictions we first need to know the content of the internal sine and
 exponential tables. My plan is to investigate that in one of the next
-post.
+posts.
 
 However I can already give a program that correctly predicts the maximum
-amplitudes of all 128 EG levels. This program is based on earlier OPL3
+amplitudes for all 128 EG levels. This program is based on earlier OPL3
 reverse engineering work done by Matthew Gambrell and Olli Niemitalo:
    https://docs.google.com/document/d/18IGx18NQY_Q1PJVZ-bHywao9bhsDoAqoIn1rIm42nwo
 I'll explain in more detail in a later post.
 
 This is the program:
-
-    #include <iostream>
-    #include <cmath>
 
     int expTable[256];
 
@@ -298,12 +297,13 @@ This is the program:
             expTable[i ^ 255] = round(pow(2.0, i / 256.0) * 1024.0);
         }
         for (int i = 0; i < 128; ++i) {
-            std::cout << i << '\t' << lookupExp(16 * i) / 16 << std::endl;
+            cout << i << '\t' << lookupExp(16 * i) / 16 << endl;
         }
     }
 
 And below is the output it produces. This matches 100% with the measured
-amplitude of all 128 EG levels.
+amplitude of all 128 EG levels, including the same level-ranges that
+share the same maximum amplitude.
 
   EG-level  max-amplitude
   -----------------------

@@ -25,6 +25,20 @@ int lookup(const vector<int>& bins, int value)
 	return lower_bound(bins.begin(), bins.end(), value) - bins.begin();
 }
 
+vector<int> average(const vector<int>& data, size_t factor)
+{
+	assert((data.size() % factor) == 0);
+	vector<int> result;
+	for (size_t i = 0; i < data.size(); i += factor) {
+		size_t sum = 0;
+		for (size_t j = 0; j < factor; ++j) {
+			sum += data[i + j];
+		}
+		result.push_back(sum / factor);
+	}
+	return result;
+}
+
 int main(int argc, char** argv)
 {
 	if (argc != 4) {
@@ -34,6 +48,7 @@ int main(int argc, char** argv)
 
 	auto bins = load(argv[1]);
 	auto raw  = load(argv[2]);
+	raw = average(raw, 64);
 	//printf("%zd %zd\n", bins.size(), raw.size());
 
 	assert(is_sorted(bins.begin(), bins.end()));

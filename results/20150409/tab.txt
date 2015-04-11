@@ -1,0 +1,275 @@
+In my last post I mentioned some ideas for future tests that require
+knowing the exact content of the internal YM2413 sine and exponential
+tables. In this post I'll try to figure out their content.
+
+This post is heavily inspired by the "OPLx decapsulated" article written
+by Matthew Gambrell and Olli Niemitalo:
+   https://docs.google.com/document/d/18IGx18NQY_Q1PJVZ-bHywao9bhsDoAqoIn1rIm42nwo/edit
+That article gives the content of the tables for OPL2 and OPL3. Since
+our chip (YM2413 or OPLL) is derived from OPL2 there is a good chance
+the tables are the same. On the other hand many other internal
+calculations are done with less precision in OPLL compared to OPL2/3, so
+also the tables may store values with less precision.
+
+
+* die shots
+
+Take a look at these pictures:
+   [link: die-shots.html]
+These images are regions taken from
+   OPLL: http://siliconpr0n.org/map/yamaha/ym2413b/mz_ns50xu/
+   OPL3: http://siliconpr0n.org/map/yamaha/ymf262-m/mz_mit20x/
+(I rotated the OPL3 pictures by 180 degrees to match the orientation of
+the OPLL pictures.)
+
+These pictures show die-shots of the OPLL (1st row) and OPL3 (2nd row)
+sin-table (1st column) and exp-table (2nd column). Notice how the
+structure of the corresponding tables is almost identical between OPLL
+and OPL3.
+
+(I'm not 100% sure about this paragraph.) The individual 0 and 1 bits in
+the ROM can be seen as two different colors for the 'dots' in the middle
+of each image (though the image is not always very clear, sometimes the
+colors are so close that it's hard to decide between a 0 or a 1 bit).
+When you compare the corresponding table between OPLL and OPL3, the
+pattern of 0 and 1 bits seems to match (at least in those regions where
+the picture is clear enough).
+
+Combined (same structure, same 0/1-pattern) these items strongly suggest
+the ROMS are indeed identical between OPLL, OPL2 and OPL3.
+
+Both the sine (actually logarithm-of-sine) and exponential tables have
+256 entries. The sine table only stores the 1st quadrant of the sine.
+The log-sin values go from 0 to 2137 (so 12 bits per entry). The exp
+table stores values between 0 and 1018 (so 10 bits).
+
+The above paragraph suggests the sin and exp table respectively contain
+12x256=3072 bits and 10*256=2560 bits. But the above article explains
+the content of the tables is actually compressed (every 2nd entry stored
+as the difference with the previous one). Based on the structure of the
+ROM I'm *guessing* there's also a second form of compression: some of
+the decoders seem incomplete, so some of the horizontal rows seem to be
+shared between different entries (very vague description because I don't
+fully understand it yet, though also not very important for the rest of
+this post).
+
+
+* table lookup algorithm
+
+Now that we (probably) know the content of the tables, let's try to use
+it to predict the output of a simple waveform. Though before we can do
+that we first need to know the algorithm to go from these table-values
+to the actual sound output. For this the following forum post by
+'carbon14' was useful:
+   http://forums.submarine.org.uk/phpBB/viewtopic.php?f=9&t=15&sid=5769a3d72fb8a77b00b8e39b953c8423#p22
+(The sine table lookup was easy enough to figure out myself).
+
+It's probably easiest to explain an algorithm via code, so here it is:
+
+    int logsinTable[256];
+    int expTable[256];
+
+    void initTables() {
+        for (int i = 0; i < 256; ++i) {
+            logsinTable[i] = round(-log2(sin((i + 0.5) * M_PI_2 / 256.0)) * 256.0);
+            expTable[i] = round(exp2(i / 256.0) * 1024.0) - 1024;
+        }
+    }
+
+    int lookupSin(int val) {
+        bool sign   = val & 512;
+        bool mirror = val & 256;
+        val &= 255;
+        int result = logsinTable[mirror ? val ^ 255 : val];
+        if (sign) result |= 0x8000;
+        return result;
+    }
+
+    int lookupExp(int val) {
+        bool sign = val & 0x8000;
+        int t = (expTable[(val & 255) ^ 255] | 1024) << 1;
+        int result = t >> ((val & 0x7F00) >> 8);
+        if (sign) result = ~result;
+        return result >> 4;
+    }
+
+Here are some highlights of the code:
+* Initialize logsinTable
+  - To initialize the table we map index i from [0, 256) to [0, pi/2),
+    so that's indeed only the 1st quadrant of the sine.
+  - Because the table only stores the 1st quadrant we don't need to care
+    about negative values (yet).
+  - Actually our interval is not [0, 256) but [0, 256) + 0.5, this
+    avoids two problems later on.
+  - We take the base-2-logarithm of the sine. log2(sin(0)) is undefined,
+    but because of the '+0.5' correction we avoid this problem.
+  - sin([0, pi/2)) returns a value in range [0, 1). log([0, 1)) always
+    returns a negative value. That value is then negated, so that the
+    table only contains positive values.
+  - The result of the logarithm is scaled by 256, so it can be
+    interpreted as a fixed point value with 8 fractional bits.
+* Lookup in logsinTable
+  - As we discovered in earlier posts the YM2413 divides a full sine
+    period in 1024 steps, though the table only stores 256 entries (the
+    1st quadrant). The other quadrants are calculated via some
+    symmetry-properties.
+  - Quadrant 2 and 4 can be reconstructed by mirroring around the
+    vertical 'x=pi/2' axis. Because of the '+0.5' correction we did
+    above, this mirroring corresponds to simply flipping all the bits of
+    our (8-bit) table index.
+  - Quadrant 3 and 4 can be reconstructed by flipping the sign of the
+    result. Here that's implemented by storing the sign in bit 15 of the
+    result (an arbitrary unused bit). So we use sign-magnitude instead
+    of the more usual 2-complements representation.
+* Initialize expTable
+  - Initializing the exponential table is simpler than the logsin table.
+    We map [0, 256) to [0, 1), compute exp2(x) and scale that by a
+    factor 1024 (10 bits). (note: exp2(x) == pow(2, x))
+  - The subexpression exp2([0,1)) always yields a result in the range
+    [1,2). So after scaling by 1024, bit 10 is always set. That
+    redundant bit is not stored in the ROM, so here we subtract it.
+* Lookup in expTable
+  - Looking up a value in the exponential table is more complex. The
+    input of the lookupExp() function has the same structure as the
+    output of the lookupSin() function. It has a sign-, and a
+    magnitude-part. The magnitude is a fixed-point value with 8
+    fractional bits. One of the first things this lookup function does
+    is split the input in those 3 components: sign, integral-part and
+    fractional-part.
+  - The fractional part (8 bits) is used as index in our table (256
+    entries). Though in this implementation we still complement that
+    index (underlying reason for this is that the logsin table stores
+    _minus_ the logarithm). It's possible (likely?) that the real
+    hardware doesn't have this flip operation, instead the entries in
+    the table may be stored in reverse order.
+  - When initializing expTable we dropped the 10th bit (was anyway
+    always 1). Here we add that bit again.
+  - Next the integral part of the input is used to shift the value we
+    found in the table. Mathematically we're using the property
+       exp2(i - n) == exp2(i) / pow(2, n)
+    to extend the logical range of the exp-table. And dividing by a
+    power-of-2 corresponds to a right-shift operation.
+  - When the sign bit of the input was set we take the complement of the
+    result. So this creates a 1-complements result (instead of the more
+    usual 2-complements representation). Note that this results in two
+    possible representations for zero (+0 and -0).
+  - The lower 4 bits of the result are dropped. (I'm not 100% sure, but
+    I think that because of this step the OPLL exponential table could
+    have been simpler compared to the OPL2/3 table).
+
+Note that this algorithm is tailored towards a hardware implementation,
+or at the very least structured so that it can work on the table-data
+'discovered' by Matthew Gambrell and Olli Niemitalo. For an efficient
+software implementation you'll likely use a modified version.
+
+
+* verify the algorithm
+
+Now that we have the tables and the algorithm, let's use them to predict
+the output of some simple waveforms and compare those predictions with
+the actual generated sound.
+
+Let's first make the predictions. We can generate a sine waveform by
+simply chaining the output of the lookupSin() function to the input of
+the lookupExp() function. Or in code:
+
+    for (int i = 0; i < 1024; ++i) {
+        cout << lookupExp(lookupSin(i)) << endl;
+    }
+
+Actually this generates a sine wave with maximum volume. For variable
+volume the program becomes:
+
+    for (int i = 0; i < 1024; ++i) {
+        cout << lookupExp(lookupSin(i) + 128 * volume) << endl;
+    }
+
+Here you can see the power of the exp-log-sin-approach. Each volume-step
+attenuates the sound by -3dB, that corresponds to multiplying the
+amplitude by a factor 0.7071. Though multiplication is expensive in
+hardware. But in a logarithm-scale we can replace multiplication by
+addition (in later posts we'll see that the same trick is used to apply
+the envelope-attenuation). Later we convert back to a linear scale by
+taking the exponential.
+
+The large table below shows the predicted sine waves (1024 steps, shown
+in the rows) for the 16 different volumes (shown in the columns). Note
+that this uses 1-complements notation, so e.g. -256 actually means -255
+and -1 means -0.
+
+  [table: predicted-sine.txt]
+
+Let's now measure these waveforms. I set mod.ML=0, mod.WF=1, car.ML=8
+and car.WF=0. This makes sure that for 4 out of 8 sine periods the
+modulator is really zero (so that there is no influence of the modulator
+on the carrier) and that we measure a 'pure' sine wave (in earlier posts
+I already mentioned small discrepancies caused by the modulator). Here
+are the detailed setting values:
+
+mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=1 FB=0 AR= 0 DR=15 SL=15 RR=15}
+car={AM=0 PM=0 EG=1 KR=0 ML=08 KL=0       WF=0      AR=15 DR=00 SL=00 RR=15}
+    reg#0x20 = 0x00    key-off
+    reg#0x10 = 0x01    fnum=1
+    reg#0x30 = 0x.0    volume (0-15) / custom instrument
+    reg#0x20 = 0x10    key-on / block=0
+
+I used a very low frequency (block=0, fnum=1). Because of this (and
+because car.ML=8) one full sine period takes 32x1024 samples. We know
+that the (logical) sine table only has 1024 entries, so each entry is
+repeated 32 times. I average those 32 values (before converting ADC
+values to YM2413 values) to reduce measurement noise. Though
+unfortunately, as we'll see below, there still is some noise present.
+
+I'm happy to report that for volumes 1-15, the predictions match
+*exactly* with the measured data. For volume=0 I get the following:
+
+  [image: vol0-errors.png]
+  [image: vol0-errors-zoomed.png]
+
+These graphs show the predicted values (in blue) and the measured values
+(in red). Only the first halve of the full sine is shown, the second
+half is symmetrical (and actually matches better). Often the blue and
+red lines completely overlap (meaning the prediction is perfect). The
+second graph zooms in on the top. There we clearly see that the red line
+contains noise. E.g. it shows spikes where we expect a smooth curve, and
+it's not symmetrical around x=256.
+
+These errors occur only for amplitudes above ~214 (~470 on the graph),
+in earlier measurements we already noticed that there is considerably
+more noise near the extreme amplitudes. Volumes 1-14 all have amplitudes
+below 180 (436 on the graph), so there we have almost no measurement
+errors.
+
+Some other observations:
+* In one of my first posts where I was trying to map the measured ADC
+  values to YM2413 values I mentioned that I only saw 400 instead of 512
+  different values (actually initially I talked about 399 values and
+  only in a later post corrected for +0 and -0). If we count the number
+  of unique values in the column for volume=0 we also get 400.
+* Both volume=14 and 15 (only) use 4 possible values, 1, 0, -1, -2
+  (corresponding to +1, +0, -0, -1). Though for volume=14 the average
+  absolute amplitude is higher than for volume=15. We already saw this
+  in an earlier post.
+* If we only look at row 256 we read the maximum amplitude values for
+  each volume: 255 180(!) 127 90 63 45 31 22 15 11 7 5 3 2 1 1. These
+  correspond to the amplitudes we got in an earlier post. Except for
+  volume=1! Here we predict 180 while earlier we measured 181. Though
+  that was likely a measurement error because when I now redo the
+  measurement I get 180, just as our model predicts.
+
+So I attribute these differences for volume=0 to measurement errors and
+therefor conclude that both the content of our sin and exp tables and
+the algorithm to use them is correct.
+
+
+
+* envelope levels
+
+We already saw how to take the volume levels into account: each
+volume-step corresponds to an increase of 128 in the intermediate
+result that's used as index in the (logical) exponential table.
+
+Each volume-level (0..15) corresponds to a -3dB attenuation. Each
+envelope-level (0..127) corresponds to -0.375dB. So following that rule,
+an envelope step corresponds to an increase by 16 in the exponential
+table.

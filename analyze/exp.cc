@@ -24,7 +24,7 @@ int16_t lookupExp(uint16_t val)
 	int t = (expTable[(val & 0xFF) ^ 0xFF] << 1) | 0x0800;
 	int result = t >> ((val & 0x7F00) >> 8);
 	if (sign) result = ~result;
-	return result / 16;
+	return result >> 4;
 }
 
 uint16_t lookupSin(uint16_t val)

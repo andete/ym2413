@@ -31,7 +31,7 @@ and OPL3.
 the ROM can be seen as two different colors for the 'dots' in the middle
 of each image (though the image is not always very clear, sometimes the
 colors are so close that it's hard to decide between a 0 or a 1 bit).
-When you compare the corresponding table between OPLL and OPL3, the
+When you compare the corresponding tables between OPLL and OPL3, the
 pattern of 0 and 1 bits seems to match (at least in those regions where
 the picture is clear enough).
 
@@ -57,12 +57,12 @@ this post).
 * table lookup algorithm
 
 Now that we (probably) know the content of the tables, let's try to use
-it to predict the output of a simple waveform. Though before we can do
+them to predict the output of a simple waveform. Though before we can do
 that we first need to know the algorithm to go from these table-values
 to the actual sound output. For this the following forum post by
-'carbon14' was useful:
+'carbon14' was useful, it shows code for the exp-table lookup:
    http://forums.submarine.org.uk/phpBB/viewtopic.php?f=9&t=15&sid=5769a3d72fb8a77b00b8e39b953c8423#p22
-(The sine table lookup was easy enough to figure out myself).
+The sin-table lookup was easy enough to figure out myself.
 
 It's probably easiest to explain an algorithm via code, so here it is:
 
@@ -96,28 +96,29 @@ It's probably easiest to explain an algorithm via code, so here it is:
 Here are some highlights of the code:
 * Initialize logsinTable
   - To initialize the table we map index i from [0, 256) to [0, pi/2),
-    so that's indeed only the 1st quadrant of the sine.
+    so we divide the 1st quadrant in 256 steps.
   - Because the table only stores the 1st quadrant we don't need to care
     about negative values (yet).
-  - Actually our interval is not [0, 256) but [0, 256) + 0.5, this
-    avoids two problems later on.
-  - We take the base-2-logarithm of the sine. log2(sin(0)) is undefined,
-    but because of the '+0.5' correction we avoid this problem.
-  - sin([0, pi/2)) returns a value in range [0, 1). log([0, 1)) always
-    returns a negative value. That value is then negated, so that the
-    table only contains positive values.
-  - The result of the logarithm is scaled by 256, so it can be
-    interpreted as a fixed point value with 8 fractional bits.
+  - Actually our interval is not [0,256) but [0,256)+0.5, this avoids
+    two problems later on.
+  - We take the base-2-logarithm of the sine. At x=0 the function
+    log2(sin(x)) is undefined, but because of the '+0.5' correction we
+    never evaluate the function at x=0 and we avoid the problem.
+  - sin([0, pi/2)) returns a value in range [0, 1). So log2([0, 1))
+    always returns a negative value. That value is then negated, so that
+    the table only contains positive values.
+  - The result of the logarithm is scaled by 256 and then rounded, so it
+    can be interpreted as a fixed point value with 8 fractional bits.
 * Lookup in logsinTable
   - As we discovered in earlier posts the YM2413 divides a full sine
     period in 1024 steps, though the table only stores 256 entries (the
-    1st quadrant). The other quadrants are calculated via some
-    symmetry-properties.
-  - Quadrant 2 and 4 can be reconstructed by mirroring around the
+    1st quadrant). The other quadrants are calculated via symmetry
+    properties.
+  - Quadrant 2 (and 4) can be reconstructed by mirroring around the
     vertical 'x=pi/2' axis. Because of the '+0.5' correction we did
     above, this mirroring corresponds to simply flipping all the bits of
     our (8-bit) table index.
-  - Quadrant 3 and 4 can be reconstructed by flipping the sign of the
+  - Quadrant 3 (and 4) can be reconstructed by flipping the sign of the
     result. Here that's implemented by storing the sign in bit 15 of the
     result (an arbitrary unused bit). So we use sign-magnitude instead
     of the more usual 2-complements representation.
@@ -131,7 +132,7 @@ Here are some highlights of the code:
 * Lookup in expTable
   - Looking up a value in the exponential table is more complex. The
     input of the lookupExp() function has the same structure as the
-    output of the lookupSin() function. It has a sign-, and a
+    output of the lookupSin() function. It has a sign- and a
     magnitude-part. The magnitude is a fixed-point value with 8
     fractional bits. One of the first things this lookup function does
     is split the input in those 3 components: sign, integral-part and
@@ -158,9 +159,10 @@ Here are some highlights of the code:
     have been simpler compared to the OPL2/3 table).
 
 Note that this algorithm is tailored towards a hardware implementation,
-or at the very least structured so that it can work on the table-data
-'discovered' by Matthew Gambrell and Olli Niemitalo. For an efficient
-software implementation you'll likely use a modified version.
+or at the very least it's structured so that it can directly work on the
+table data 'discovered' by Matthew Gambrell and Olli Niemitalo. For an
+efficient software implementation you'll likely use a modified
+algorithm (with modified tables).
 
 
 * verify the algorithm
@@ -169,7 +171,7 @@ Now that we have the tables and the algorithm, let's use them to predict
 the output of some simple waveforms and compare those predictions with
 the actual generated sound.
 
-Let's first make the predictions. We can generate a sine waveform by
+Let's start with the predictions. We can generate a sine waveform by
 simply chaining the output of the lookupSin() function to the input of
 the lookupExp() function. Or in code:
 
@@ -184,12 +186,16 @@ volume the program becomes:
         cout << lookupExp(lookupSin(i) + 128 * volume) << endl;
     }
 
+So we only need to add an offset to the result of the lookupSin()
+function. Note that because of the sign-magnitude representation we
+don't need to distinguish between positive and negative values.
+
 Here you can see the power of the exp-log-sin-approach. Each volume-step
 attenuates the sound by -3dB, that corresponds to multiplying the
 amplitude by a factor 0.7071. Though multiplication is expensive in
-hardware. But in a logarithm-scale we can replace multiplication by
-addition (in later posts we'll see that the same trick is used to apply
-the envelope-attenuation). Later we convert back to a linear scale by
+hardware. But in a logarithm-scale we can replace multiplication with
+addition (later we'll see that the same trick is used to apply the
+envelope-attenuation). At the end we convert back to a linear scale by
 taking the exponential.
 
 The large table below shows the predicted sine waves (1024 steps, shown
@@ -203,14 +209,14 @@ Let's now measure these waveforms. I set mod.ML=0, mod.WF=1, car.ML=8
 and car.WF=0. This makes sure that for 4 out of 8 sine periods the
 modulator is really zero (so that there is no influence of the modulator
 on the carrier) and that we measure a 'pure' sine wave (in earlier posts
-I already mentioned small discrepancies caused by the modulator). Here
-are the detailed setting values:
+I already mentioned small discrepancies caused by a not fully suppressed
+modulator). Here are the detailed setting values:
 
 mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=1 FB=0 AR= 0 DR=15 SL=15 RR=15}
 car={AM=0 PM=0 EG=1 KR=0 ML=08 KL=0       WF=0      AR=15 DR=00 SL=00 RR=15}
     reg#0x20 = 0x00    key-off
     reg#0x10 = 0x01    fnum=1
-    reg#0x30 = 0x.0    volume (0-15) / custom instrument
+    reg#0x30 = 0x0.    custom instrument / volume (0-15)
     reg#0x20 = 0x10    key-on / block=0
 
 I used a very low frequency (block=0, fnum=1). Because of this (and
@@ -226,50 +232,54 @@ I'm happy to report that for volumes 1-15, the predictions match
   [image: vol0-errors.png]
   [image: vol0-errors-zoomed.png]
 
-These graphs show the predicted values (in blue) and the measured values
-(in red). Only the first halve of the full sine is shown, the second
-half is symmetrical (and actually matches better). Often the blue and
-red lines completely overlap (meaning the prediction is perfect). The
-second graph zooms in on the top. There we clearly see that the red line
-contains noise. E.g. it shows spikes where we expect a smooth curve, and
-it's not symmetrical around x=256.
+These graphs show the predicted values in blue and the measured values
+in red. Only the first halve of the full sine is shown, the second half
+is more or less symmetrical (actually it matches better than the part
+that's shown). Often the blue and red lines completely overlap (meaning
+the prediction is perfect). The second graph zooms in on the top. There
+we clearly see that the red line contains noise. E.g. it shows spikes
+where we expect a smooth curve, and it's not symmetrical around x=256.
 
 These errors occur only for amplitudes above ~214 (~470 on the graph),
 in earlier measurements we already noticed that there is considerably
 more noise near the extreme amplitudes. Volumes 1-14 all have amplitudes
-below 180 (436 on the graph), so there we have almost no measurement
-errors.
+below 180 (436 on the graph), so there we have no measurement errors.
 
-Some other observations:
-* In one of my first posts where I was trying to map the measured ADC
-  values to YM2413 values I mentioned that I only saw 400 instead of 512
-  different values (actually initially I talked about 399 values and
-  only in a later post corrected for +0 and -0). If we count the number
-  of unique values in the column for volume=0 we also get 400.
+So I attribute these differences for volume=0 to measurement errors and
+therefor conclude that both the content of our sin and exp tables and
+the algorithm that uses those tables is correct.
+
+By looking closely at the predictions-table we can make the following
+additional observations:
+* In one of my first posts I was trying to map the measured ADC
+  values to YM2413 values. There I mentioned that I only saw 400 instead
+  of 512 different values (actually initially I talked about 399 values
+  and only in a later post corrected for +0 and -0). If we count the
+  number of unique values in the column for volume=0 we also get 400.
 * Both volume=14 and 15 (only) use 4 possible values, 1, 0, -1, -2
   (corresponding to +1, +0, -0, -1). Though for volume=14 the average
   absolute amplitude is higher than for volume=15. We already saw this
   in an earlier post.
-* If we only look at row 256 we read the maximum amplitude values for
-  each volume: 255 180(!) 127 90 63 45 31 22 15 11 7 5 3 2 1 1. These
-  correspond to the amplitudes we got in an earlier post. Except for
-  volume=1! Here we predict 180 while earlier we measured 181. Though
-  that was likely a measurement error because when I now redo the
-  measurement I get 180, just as our model predicts.
-
-So I attribute these differences for volume=0 to measurement errors and
-therefor conclude that both the content of our sin and exp tables and
-the algorithm to use them is correct.
-
+* If we look at row 256 in the table we can read the maximum amplitude
+  value for each volume: 255 180(!) 127 90 63 45 31 22 15 11 7 5 3 2 1
+  1. These match with the amplitudes we got in an earlier post. Except
+  for volume=1, the table predicts 180 while earlier we measured 181.
+  Though that was likely a measurement error because when I now redo
+  that measurement I get 180, just as our model predicts.
 
 
 * envelope levels
 
-We already saw how to take the volume levels into account: each
-volume-step corresponds to an increase of 128 in the intermediate
+We already saw how the volume is taken into account in the algorithm:
+each volume-step corresponds to an increase of 128 in the intermediate
 result that's used as index in the (logical) exponential table.
 
 Each volume-level (0..15) corresponds to a -3dB attenuation. Each
-envelope-level (0..127) corresponds to -0.375dB. So following that rule,
-an envelope step corresponds to an increase by 16 in the exponential
-table.
+envelope-level (0..127) corresponds to -0.375dB attenuation. So
+following that rule, an envelope step corresponds to an increase by 16
+in the exponential table. The algorithm then becomes:
+
+        lookupExp(lookupSin(i) + 128 * volume + 16 * eg_level)
+
+I'll likely use that in my next post to improve the attack-rate envelope
+measurements.

@@ -1,0 +1,201 @@
+It's been over half a year since I last worked on analyzing the YM2413.
+Today I finally continued. So let's restart with something simple:
+amplitude modulation.
+
+Each operator (modulator or carrier) has one bit for amplitude
+modulation (AM). The YM2413 application manual only contains this:
+  Amplitude modulation on/off switch. When this bit is "1", amplitude
+  modulation will be applied to the slot. The frequency is 3.7Hz.
+
+As a secondary source of information we can look at the Y8950, YMF262
+and YMF278 application manuals. These mention the same frequency of
+3.7Hz and in addition they specify the modulation depth is either 4.8dB
+or 1dB (can be globally selected). On YM2413 the modulation depth is not
+selectable. As we'll see later it's also 4.8dB. The YMF278 manual even
+has a small graph showing that the amplitude modulation varies between
+0dB and -4.8dB in a triangular shape.
+
+    -4.8dB ---/\------/\------
+             /  \    /  \
+         \  /    \  /    \  /
+     0dB -\/------\/------\/--
+
+
+I started by looking at some emulation code (YM2413 or other). All
+emulation cores more or less use the following schema:
+
+- There is a table containing 210 elements:
+	int am_table[210] = {
+		 0, 0, 0, 0, 0, 0, 0,  // 7x
+		 1, 1, 1, 1,           // 4x
+		 2, 2, 2, 2,
+		 3, 3, 3, 3,
+		 4, 4, 4, 4,
+		 5, 5, 5, 5,
+		 6, 6, 6, 6,
+		 7, 7, 7, 7,
+		 8, 8, 8, 8,
+		 9, 9, 9, 9,
+		10,10,10,10,
+		11,11,11,11,
+		12,12,12,12,
+		13,13,13,13,
+		14,14,14,14,
+		15,15,15,15,
+		16,16,16,16,
+		17,17,17,17,
+		18,18,18,18,
+		19,19,19,19,
+		20,20,20,20,
+		21,21,21,21,
+		22,22,22,22,
+		23,23,23,23,
+		24,24,24,24,
+		25,25,25,25,
+		26,26,26,              // 3x
+		25,25,25,25,
+		24,24,24,24,
+		23,23,23,23,
+		22,22,22,22,
+		21,21,21,21,
+		20,20,20,20,
+		19,19,19,19,
+		18,18,18,18,
+		17,17,17,17,
+		16,16,16,16,
+		15,15,15,15,
+		14,14,14,14,
+		13,13,13,13,
+		12,12,12,12,
+		11,11,11,11,
+		10,10,10,10,
+		 9, 9, 9, 9,
+		 8, 8, 8, 8,
+		 7, 7, 7, 7,
+		 6, 6, 6, 6,
+		 5, 5, 5, 5,
+		 4, 4, 4, 4,
+		 3, 3, 3, 3,
+		 2, 2, 2, 2,
+		 1, 1, 1, 1,
+	};
+- Every 64 samples we advance one position in this table. The current
+  entry in the table causes an extra attenuation of the operator's
+  output.
+
+Cycling through the full table takes 64 x 210 = 13440 samples. And when
+clocked at 3.57MHz this results in an AM frequency of
+
+   (3.579545MHz / 72) / 13440 = 3.699Hz
+
+This matches the 3.7Hz from the manuals.
+
+Notice that most values are repeated 4x in the table, so they last 256
+samples. Except value 0 which is repeated 7x (thus lasts 448 samples)
+and value 26 is only repeated 3 times (lasts 192 samples). In hardware
+this table can be generated using an up-down counter (no need for a
+ROM).
+
+The YM2413 emulation code follows the same general approach with one
+difference: each value from this table is immediately divided by 2 (IOW
+the last bit is dropped). This gives only 14 different values (0..13),
+and:
+ - value 0 (0 and 1 in original table) is repeated 15 times
+ - values 1..12 are repeated 8 times
+ - value 13 (26 in original table) is repeated 3 times
+
+
+Now let's verify this with some measurements. I measured these settings:
+
+mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=1 FB=0 AR=15 DR=15 SL=00 RR=15}
+car={AM=1 PM=0 EG=1 KR=0 ML=01 KL=0       WF=0      AR=15 DR=00 SL=15 RR=00}
+    reg#0x10 = 0x02    fnum-low=2
+    reg#0x30 = 0x00    max volume / custom instrument
+    reg#0x20 = 0x10    key-on / block=0
+
+This is a sine-wave (or a good approximation, see earlier posts for
+details) played at a _very_ low frequency of approx 0.2Hz. This
+frequency is (intentionally) so low that each of the 1024 entries of the
+sine-table is repeated 256 times. In other words we expect the output to
+remain constant of at least 256 successive samples (and more near the
+peaks of the sine).
+
+The captured data looks like this (to reduce measurement noise I
+averaged 64 successive samples, this detail in not important, except
+when interpreting the values on the x-axis):
+
+    [image: sine-am.png]
+
+This shows approximately one period of a sine. Because the frequency of
+the sine is so low compared to the AM frequency, we can clearly see the
+effect of the AM. Notice that the amplitude is indeed modulated
+(=multiplied), meaning large amplitude values are affected more than low
+amplitudes (in absolute terms).
+
+When zoomed into the region marked in green we get this:
+
+  [image: sine-am-zoomed.png]
+
+This confirms the modulation shape is triangular with (only) 14
+different levels (0..13), so the YM2413 indeed seems to drop the lowest
+bit of the 'am_table' (or more likely doesn't generate this bit in the
+first place).
+
+Using this graph I could also measure the duration of the top, middle
+and bottom parts of the triangle (marked respectively in yellow, green
+and red). This gave:
+
+  top    (yellow):  960 samples  (15 x 64)
+  middle (green ):  512 samples  ( 8 x 64)
+  bottom (red   ):  192 samples  ( 3 x 64)
+
+And this exactly corresponds to the above (truncated) table.
+
+In the above (zoomed) image we can also approximately measure the
+modulation depth. When the top of a triangle (more or less) coincides
+with the top of the sine we get the maximum amplitude and as expected we
+measure an YM2413-ADC value of 511 (this corresponds to +255, see
+earlier posts). The ADC-value at the bottom of the triangle immediately
+left or right of this top is approximately 400 (corresponds to +144). So
+that gives:
+
+   20 * log10(144 / 255) = -4.96dB
+
+Though our measurement is an overestimation because at the bottom of the
+triangle the sine is no longer at its peak. When we take this small
+error into account, the result matches well with the documented value of
+4.8dB.
+
+
+Let's now plug this into our YM2413-operator-model.
+
+In earlier posts we already found that the output of an operator can be
+modeled like this:
+
+    expTable[sineTable[phase] + 128 * volume + 16 * envelope]
+      phase:    0..1023
+      volume:   0..15
+      envelope: 0..127
+
+We now need an additional term for AM.
+
+    expTable[sineTable[phase] + 128 * volume + 16 * envelope + 16 * am]
+      am: 0..13
+
+I found the factor '16' by experimentation: it must be a power-of-2 and
+'16' makes the model very closely correspond to the measured data.
+
+In fact let's see at a wave that is generated using the above model:
+
+  [image: generated-am.png]
+
+You can see it's very close to the measured data. But it's not identical
+because:
+- The phase-offset between the sine and the AM might not be the same in
+  both cases (though in this simulation I did pick an offset that makes
+  the difference as small as possible).
+- The simulation only looks at one operator, while the measurement has
+  both the modulator and carrier operator, and the effect of the
+  modulator on the carrier cannot be 100% suppressed (that's why earlier
+  I said the instrument settings only approximately generate a sine
+  wave).

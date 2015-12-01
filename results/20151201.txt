@@ -1,0 +1,164 @@
+In the last post I looked at the operators amplitude-modulation (AM)
+function. Now I'll check the frequency-modulation (FM) function, or
+vibrato (VIB) as it's called in the YM2413 application manual.
+
+
+* Official documentation
+
+Just like the AM function, the FM function is poorly documented in the
+YM2413 application manual:
+    Vibrato on/off switch. When this bit is "1", vibrato will be applied
+    to the slot. The frequency is 6.4Hz.
+The manual doesn't mention the modulation depth.
+
+The Y8950 and YMF262 manuals give more info: they repeat the frequency
+value of 6.4Hz and in addition specify the modulation depth as either 14
+cent or 7 cent (globally selectable, for YM2413 the depth is not
+selectable).
+
+The YMF278 manual (the FM part) instead specifies a frequency of 6.0Hz
+and the same modulation depth of 14 or 7 cent. It also shows a little
+graph:
+          ^
+  +14cent |  /\
+          | /  \
+          |/    \        /          (it's also a triangle in the
+         -/------\------/---->       documentation, not just this
+          |       \    /             ascii graph)
+          |        \  /  6.0Hz
+  -14cent |         \/
+
+Wikipedia explains: 1 cent is 1/100 of a semi-tone or 1/1200 of an
+octave. So 14 cent is pow(2, 14/1200) = 1.0081, that is less than 1%
+deviation from the base frequency.
+
+Note that the frequency is changed both in positive and in negative way.
+The amplitude modulation (previous post) only worked in one direction
+(only attenuate).
+
+  Preview: at the end of this post we'll see that the YM2413 vibrato
+  frequency is actually 6.1Hz with a approximate depth of 14 cent.
+
+
+* Existing emulator code
+
+When the official documentation is insufficient, it's often a good idea
+to check how existing emulators implement the feature (even though one
+of the goals of these investigations is to improve the emulators).
+
+The FM modulation code uses the following two dimensional table
+
+    // LFO Phase Modulation table (copied from Burczynski core)
+    int pmTable[8][8] = {
+        { 0, 0, 0, 0, 0, 0, 0, 0, }, // FNUM = 000xxxxxx
+        { 0, 0, 1, 0, 0, 0,-1, 0, }, // FNUM = 001xxxxxx
+        { 0, 1, 2, 1, 0,-1,-2,-1, }, // FNUM = 010xxxxxx
+        { 0, 1, 3, 1, 0,-1,-3,-1, }, // FNUM = 011xxxxxx
+        { 0, 2, 4, 2, 0,-2,-4,-2, }, // FNUM = 100xxxxxx
+        { 0, 2, 5, 2, 0,-2,-5,-2, }, // FNUM = 101xxxxxx
+        { 0, 3, 6, 3, 0,-3,-6,-3, }, // FNUM = 110xxxxxx
+        { 0, 3, 7, 3, 0,-3,-7,-3, }, // FNUM = 111xxxxxx
+    };
+
+The upper 3 bits of 'fnum' (~ the frequency of the operator) select a
+row from this table. Over time we cycle through all the values in this
+row, advancing one position every 1024 samples.
+
+There are 8 positions in a row, so the pattern repeats every 8 x 1024
+samples. Thus the vibrato frequency is:
+    (3.579545MHz / 72) / (8 x 1024) = 6.069Hz
+Rounded that's 6.1Hz and because of a transcription error that might
+become 6.4Hz (this is not the first time the Yamaha application manuals
+have 1<->4 errors). The value 6.0Hz from the YMF278 manual could be OK.
+
+Within one row in 'pmTable' the values form a sort-of triangular shape,
+just like the graph in the YMF278 manual.
+
+These values are a 'correction' on the 'phase-step'. But let's first
+refresh the phase and phase-step stuff. Phase is a 10.9 bits fixed point
+value (upper 10 bits are used as index in the sine-table). Each sample
+'phase' is advanced with 'phase-step'. In an earlier post (20150316) I
+gave this formula for 'phase-step':
+
+    phase-step = ((fnum * mlTab[ML]) << block) >> 1
+
+When we extend this formula with the 'FM-correction' we get:
+
+    lfo_pm = pmTable[fnum >> 6][counter >> 10]
+    phase-step = (((2 * fnum + lfo_pm) * mlTab[ML]) << block) >> 2
+
+Notice that when FM is disabled (lfo_pm = 0) we get the same formula as
+before.
+
+For example when
+    fnum=0x1c0, block=6, ML=1
+we obtain, in sequence, for step-size
+    28672,28768,28896,28768,28672,28576,28448,28576
+(so each of these step-sizes is used for 1024 consecutive samples)
+
+When we calculate the maximum deviation from the base-frequency for this
+example, we get:
+    28896 / 28672 = 1.0078
+and that's close to 14 cent. Note that because pmTable contains integer
+approximations that are used for a range of different fnum values, the
+modulation depth is not exactly the same for every possible frequency.
+
+Also note that the values in pmTable are not too difficult to generate
+with some logic functions instead of requiring a ROM table. The 3rd
+column is simply the upper 3 bits of fnum, the other columns are
+down-shifted and/or negated versions of it.
+
+
+* Measurements
+
+The previous section explains how current emulators implement the FM
+function. But is that also what the real hardware does? At the very
+least the algorithm is suitable for a simple hardware implementation.
+
+I measured the following settings:
+
+mod={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=00 SL=00 RR=15}
+car={AM=0 PM=1 EG=1 KR=0 ML=01 KL=0       WF=0      AR=15 DR=00 SL=00 RR=15}
+    reg#0x10 = 0xC0    fnum-low=0xc0
+    reg#0x30 = 0x00    max volume / custom instrument
+    reg#0x20 = 0x1d    key-on / block=6 / fnum-high=0x100
+
+The frequency modulation is audible. But visually the graph looks like a
+normal sine wave, it's not possible to see the frequency deviation of
+less than 1% (and because of this I won't include graphs in this post).
+
+Next I generated a pure sine wave with the same base frequency (so
+without FM). When I try to align this generated graph with the measured
+graph (align by adjusting the initial phase), I can only make certain
+regions match. The length of such a region is 1024 samples (though I
+could only measure this approximately). This is a strong indication the
+'1024 samples stuff' is indeed correct. I could also verify that the
+pattern repeats every 8192 samples.
+
+I also generated sine waves with 'corrected' frequencies (I mean
+including the correction factors of pmTable). For those the graphs match
+in other (adjacent) regions. This means the correction factors are
+indeed those from pmTable (I only verified the last row in the table:
+0,+3,+7,+3,0,-3,-7,-3).
+
+Finally I built-in the FM modulation in my generator and with that I
+could match the full measured waveform. Or at least approximately match.
+It's not an exact match for the following reasons:
+ - The phase counter has 19 bits, I only adjusted by shifting full
+   sample values (so roughly in steps of 28672)
+ - The global counter (13 relevant bits) is likely not synchronized with
+   the start of the sine wave. In my simulation it was.
+ - Same argument as in most previous posts: my simulation has a single
+   operator while the measurements have modulator+carrier.
+
+The first two points can be overcome by tweaking the simulation (this is
+time consuming), but for the last we first need to know more about the
+connection between the modulator and carrier (I hope to investigate this
+in the near future).
+
+But even though the match was not exact, it was close enough that I'm
+confident the YM2413 indeed uses the same algorithm that the emulators
+use (I could match the 'features' of the algorithm).
+
+
+Wouter

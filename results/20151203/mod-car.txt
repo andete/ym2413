@@ -1,16 +1,16 @@
 !!! DRAFT !!!
 
+* Introduction
 
-
-The YM2413 contains 18 operators, 2 operators combined form one channel,
+The YM2413 contains 18 operators, 2 operators combined form 1 channel,
 so the YM2413 has 9 melodic channels. Alternatively 6 of the operators
 can be used to produce 5 rhythm sounds, resulting in 6 melodic channels
 plus 5 rhythm channels.
 
-So far all this reverse engineering was focused on a single operator. In
-this post I'll finally combine two operators into one melodic channel.
+So far all the reverse engineering was focused on a single operator. In
+this post I'll finally combine 2 operators into 1 melodic channel.
 
-The YM2413 has the following diagram:
+The YM2413 datasheet contains the following diagram:
 
    +-------------------+     +-------------------+
    |           +-----+ |     |           +-----+ |
@@ -34,18 +34,18 @@ The YM2413 has the following diagram:
           EG: envelope generator (includes attack-decay-sustain-release,
               but also amplitude modulator)
 
-Each of the two big squares is one operator, by chaining them together
-in this configuration (the only possible configuration for YM2413, Y8950
-and YMF262 have also other configurations) the output of the first
+Each of the 2 big squares is 1 operator, by chaining them together in
+this configuration (the only possible configuration for YM2413, Y8950
+and YMF262 have also other configurations) the output of the 1st
 operator (called the 'modulator', or 'mod') can modulate the phase of
-the second operator (called the 'carrier' or 'car').
+the 2nd operator (called the 'carrier' or 'car').
 
-So this configuration implements phase modulation. Though phase
-modulation and frequency modulation or mathematically closely linked. So
-often this configuarion is also called frequency modulation. Note that
-this is a different form of frequency modulation as what was discussed
-in the last post (that was FM within one operator, here it's two
-operators combined that produce FM).
+So this configuration implements phase modulation. Mathematically phase
+modulation and frequency modulation are closely linked. So often this
+configuration is also called frequency modulation. Note that this is a
+different form of frequency modulation as what was discussed in the
+previous post (that was FM within 1 operator, here it's 2 operators
+combined that produce FM).
 
 
 From all the information in the previous posts we already have a fairly
@@ -66,71 +66,72 @@ car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=15 DR=00 SL=00 RR=15}
     reg#0x10 = 0x40    fnum-low=0x40
     reg#0x30 = 0x00    max volume / custom instrument
     reg#0x20 = 0x10    key-on / block=0
-  with TL between 0..63
+  with TL varied between 0..63
 
 Note: for TL=63 this gives the (almost) sine wave I've been using in
 most of my previous posts. For lower values of TL the modulator operator
-get less attenuated and thus there's more modulation.
+gets less attenuated and thus there's more modulation.
 
-I'm using a very low frequency: 16384 samples for one period (~3Hz). So
+I'm using a very low frequency: 16384 samples for 1 period (~3Hz). So
 each of the 1024 entries in the sine table is repeated 16 times.
 
 The results are presented in a table on the following page (I suggest to
-look at these images from back to front):
+look at these images from back to front, 63 to 0):
 
     [link: mod.html]
 
 Some observations:
 
-- The amount of modulation indeed increases with decreaseing TL.
+- The amount of modulation indeed increases with decreasing TL.
 
 - All images appear to be upside down: normally you expect a sine wave
-  to first go up and then down, in all these images it's the other way
+  to first go up and then down. In all these images it's the other way
   around. I did start each graph right after the 'key-on' event (more on
-  this below), so I didn't simply have a 180 degree phase shift. One
+  this below), so there isn't simply a 180 degrees phase shift. One
   explanation is that the sine-table in the YM2413 really is like this.
-  but a much more likely explanation is that in the whole test setup
-  the sign of the audio signal is simply flipped. And this also doesn't
-  matter at all.
+  But a much more likely explanation is that in the whole test setup the
+  sign of the audio signal is somehow flipped. But this doesn't matter
+  at all.
 
-- Each time the same note is played, the wave looks exactly the same,
-  this suggests the phases of both operators are somehow synchronized.
-  This suggests both phase-counters are reset to zero at the start of
-  the attack phase of a note.
+- Each time the same note is played, the wave looks exactly the same.
+  This suggests the phases of both operators are somehow synchronized.
+  Possibly both phase-counters are reset to zero at the start of the
+  attack phase.
 
-- The frequency of both operators was choosen so that they both produce
-  the same value for 16 consecutive samples. Though when we zoom in very
-  close we see this:
+- The frequency of both operators was chosen so that they both produce
+  the same value for 16 consecutive samples. Though when we zoom in we
+  see this:
     [image: mod8-zoom1.png]
     [image: mod8-zoom2.png]
-  (These graphs are for TL=8, but similar features can be seen for the
-  other values). Instead of seeing the same value for 16 consecutive
-  samples we only see 15 samples with the same value, followed by one
+  (These graphs are for TL=8, but similar features can be seen for all
+  other TL values). Instead of seeing the same value for 16 consecutive
+  samples we only see 15 samples with the same value, followed by 1
   other value again followed by 15 constant samples. This could be
   explained by assuming the modulator and carrier are 1 step out of
   phase.
 
-- The next image combines 3 of previous graphs into one (for TL=32, 48
-  and 63).
+- The next image combines 3 of the graphs from the table into 1 image
+  (for TL=32, 48 and 63).
     [image: mod-63-48-32.png]
   In this test both the modulator and the carrier have the same
   frequency, we also believe they are both (almost) in phase. So that
-  means every half-period both operators sine-wave cross zero, so the
+  means every half-period both operators sine-wave cross zero. So the
   output of the total channel should also be zero. We can indeed see
-  this in the combined graph: every 8192 samples all graphs cross zero
-  (remember value 255 and 256 on the y-axis reprsent YM2413 +0 and -0).
+  this in the combined image: every 8192 samples all graphs cross zero.
+  (Remember value 255 and 256 on the y-axis represent YM2413 +0 and -0).
 
   If we zoom in near the green and red box we respectively get:
     [image: mod-63-48-32-zoom1.png]
     [image: mod-63-48-32-zoom2.png]
-  This shows that every half period, the waveforms for any TL-value
-  indeed _exactly_ overlap.
+  This shows that every half period, the waveforms for all TL-value
+  indeed _exactly_ overlap (image only shows 3, but this property holds
+  for all TL values).
 
 - It's also interesting to see what happens immediately before (i.e. to
-  the left) of all these graphs. The next image shows a zoomed version
-  of that situation. Inside the red circle you see a spike. I started
-  all the graphs in the big table at the sample immediately right from
-  this spike.
+  the left) of all these graphs, that is before key-on was set. The next
+  image shows a zoomed version of that situation. Inside the red circle
+  you see a spike. I started all the graphs in the big table at the
+  sample immediately right from this spike.
     [image: transition.png]
 
   At the left of this graph, the waveform of the previous measurement is
@@ -140,51 +141,45 @@ Some observations:
   to the attack phase, the envelope generator first (at a fairly fast
   pace) drops to maximum attenuation, only when that point is reached we
   enter the attack phase (I think this is different from the other OPLx
-  chips, I need to investigate this is more detail). The whole 'damp'
-  phase is indicated by the green line.
+  chips, I need to investigate this is more detail later). The whole
+  'damp' phase is indicated by the green line.
 
-  Near the right is the red circle. There are two interesting features
+  Near the right is the red circle. There are 2 interesting features
   in this circle:
   - The spike I already mentioned. In all these measurement I saw such a
-    spike, the width is always a single sample, but the height varies
+    spike. The width is always a single sample, but the height varies
     from measurement to measurement. I used these spikes to sync all
-    graphs on. I have no idea yet what causes these spikes.
+    graphs on. I have no idea yet what causes these spikes, but it might
+    be related to the off-by-1 synchronization between mod and car.
   - Immediately right from the spike the attack phase starts. I've
-    choose AR=15, that should result in an infinitely fast attack rate,
-    though initially the signal does start a little slower than
-    expected. At least when you compare with the values from the later
-    periods (16384 samples further). Maybe AR=15 is not infinitely fast?
+    chosen AR=15 for my measurements, that should result in an
+    infinitely fast attack rate, though the signal does start slower
+    than expected. At least when you compare with the values from the
+    later periods (16384 samples further). Maybe AR=15 is not infinitely
+    fast?
 
 - It's interesting to look at the graph for TL=37 in more detail.
   Halfway each period there's a region where the graph appears 'flat'.
-  the next image zooms in on that region:
+  The next image zooms in on that region:
     [image: mod37-zoom.png]
   As you can see the actual signal is not flat at all, it oscillates
-  between two values with spikes to a 3rd value. More on this below.
+  between 2 values with spikes to a 3rd value. More on this below.
 
 
 * Model the observed behavior.
 
-Next step is to try to reproduce the measured values with a model of the
-system. But let me first repeat the model we had so far for a single
+The next step is to try to reproduce the measured values with a model of
+the system. But let me first repeat the model we had so far for a single
 operator:
 
-    uint16_t expTable[256];
     uint16_t logsinTable[256];
+    uint16_t expTable[256];
 
     void initTables() {
         for (int i = 0; i < 256; ++i) {
-            expTable[i] = round((pow(2.0, double(i) / 256.0) - 1.0) * 1024.0);
-            logsinTable[i] = round(-log(sin((double(i) + 0.5) * M_PI / 256.0 / 2.0)) / log(2.0) * 256.0);
+            logsinTable[i] = round(-log2(sin((double(i) + 0.5) * M_PI / 256.0 / 2.0)) * 256.0);
+            expTable[i] = round((exp2(double(i) / 256.0) - 1.0) * 1024.0);
         }
-    }
-
-    int16_t lookupExp(uint16_t val) {
-        bool sign = val & 0x8000;
-        int t = (expTable[(val & 0xFF) ^ 0xFF] << 1) | 0x0800;
-        int result = t >> ((val & 0x7F00) >> 8);
-        if (sign) result = ~result;
-        return result >> 4;
     }
 
     uint16_t lookupSin(uint16_t val) {
@@ -194,6 +189,14 @@ operator:
         auto result = logsinTable[mirror ? val ^ 0xFF : val];
         if (sign) result |= 0x8000;
         return result;
+    }
+
+    int16_t lookupExp(uint16_t val) {
+        bool sign = val & 0x8000;
+        int t = (expTable[(val & 0xFF) ^ 0xFF] << 1) | 0x0800;
+        int result = t >> ((val & 0x7F00) >> 8);
+        if (sign) result = ~result;
+        return result >> 4;
     }
 
     int main() {
@@ -210,8 +213,8 @@ operator:
 Of course this is a simplified model, it's ignoring frequency, envelope
 and per-operator FM- and AM-modulation.
 
-To extend this model to a 2-operator channel, the main loop needs the
-follow form:
+To extend this model to a 2-operator channel, the main loop needs to
+have the following form:
 
     int TL = 0; // modulation index 0..63
     for (int i = 0; i < 1024; ++i) {
@@ -221,26 +224,30 @@ follow form:
         cout << lookupExp(s2 + 128 * vol + 16 * vol + 16 * am) + 256 << endl;
     }
 
-I first tried to match the overal shape of the measured data for TL=0
-(so <unknown1> doesn't matter). I found that I needed to set
-'unknown2=16' to match the measurements. In this model the maximum value
+I first tried to match the overall shape of the measured data for TL=0
+(so 'unknown1' doesn't matter). I found that I needed to set 'unknown2'
+equal to 16 to match the measurements. In this model the maximum value
 returned by lookupExp() is +/-255, multiplied by 16 is +/-4095. This is
 added to the value passed to lookupSin(), the sin table only has 1024
 entries, so an offset in range -4095..4095 corresponds to a modulation
 depth of -8pi..8pi.
 
-Note that the implementation of lookupExp() drops the lowest 4 bits of
-the intermediate value (the value from the exponent-rom-table).
-Immediately after we multiply the value by 16, so maybe these bits
-didn't need to be dropped after all? Remember in an earlier post I
-showed the die shot of the YM2413 and YMF262 ROM tables was nearly
-identical and I found it strange that in our YM2413 model we dropped the
-lowest 4 bits of exponent table. So maybe in the mod-car calculations
-all the bits of this table are used?
+Note that the implementation of lookupExp() drops the lowest 4 bits from
+the value found in the exponent-lookup-table. Immediately after we
+multiply that value by 16. So maybe these bits didn't need to be dropped
+in the first place? Remember, in an earlier post I showed the die shots
+of the YM2413 and YMF262 ROM tables, and they were quasi identical,
+suggesting the YM2413 and YMF262 use the same exponent ROM table. In
+that post I also said I found it strange that in our YM2413 model we
+drop the lowest 4 bits of exponent table (why include the bits in the
+table if they are not used). So maybe here, in the mod-car calculation,
+all the bits of this table are being used?
 
-Further experimentation show that for non-zero values of TL, the model
-matches (overal shape) the measurements for 'unknown1=32'. With this
-refinement the model becomes.
+Further experiments show that for non-zero values of TL, the model
+matches (the overall shape of) the measurements for 'unknown1' equal to
+32. I've also changed the model to produce 16 consecutive samples with
+the same value (same as in the measurements). With all these changes the
+model becomes:
 
     int16_t lookupExp2(uint16_t val) {
         bool sign = val & 0x8000;
@@ -253,13 +260,77 @@ refinement the model becomes.
     ...
 
     int TL = 0; // modulation index 0..63
-    for (int i = 0; i < 1024; ++i) {
-        auto s1 = lookupSin(i);
+    for (int i = 0; i < 1024 * 16; ++i) {
+        auto s1 = lookupSin(i / 16);
         auto m  = lookupExp2(s + 32 * TL);
-        auto s2 = lookupSin(i + m);
+        auto s2 = lookupSin(i / 16 + m);
         cout << lookupExp(s2 + 128 * vol + 16 * vol + 16 * am) + 256 << endl;
     }
 
+So the overall shape of the waveforms produced by this model already
+matches the measurements, but the details are still wrong. For example
+compare with the zoomed graph for TL=37 (the 'flat' section in that
+graph). The current model produces a too smooth graph:
+
+   [image: model-smooth.png]
+
+Earlier I already guessed the mod and car operators are 1 sample out of
+phase. Let's test this hypothesis by tweaking the model:
+
+    for (int i = 0; i < 1024 * 16; ++i) {
+        auto s1 = lookupSin((i - 1) / 16);
+        auto m  = lookupExp2(s + 32 * TL);
+        auto s2 = lookupSin(i / 16 + m);
+        cout << lookupExp(s2 + 128 * vol + 16 * vol + 16 * am) + 256 << endl;
+    }
+
+   [image: model-spikes.png]
+
+So this can reproduce the spikes, but the other oscillations are still
+missing. It took some time, but then I got the idea to reduce the
+resolution of the expTable again (by 1 bit instead of 4). This can be
+modeled like this:
+
+    for (int i = 0; i < 1024 * 16; ++i) {
+        auto s1 = lookupSin((i - 1) / 16);
+        auto m  = lookupExp2(s + 32 * TL) & ~1; // mask lowest bit
+        auto s2 = lookupSin(i / 16 + m);
+        cout << lookupExp(s2 + 128 * vol + 16 * vol + 16 * am) + 256 << endl;
+    }
+
+   [image: model-ok.png]
+
+With this last change the graph matches _exactly_ with the measured
+data, not only for TL=37, but for all values!
+
+Actually, it's not a 100% match for the following two reasons:
+- Measurement noise: when I overlay a measured with a generated graph
+  you sometimes see small spikes in the measured version. These only
+  occur near the extremes (top and bottom y-values) and from previous
+  posts we know there is considerably more noise in those regions. When
+  measuring the same data again, these spikes disappear or move to
+  different positions. That's another indication it's just noise.
+
+  The follwoing image shows this. The blue curve is the measured data,
+  the green curve is the generated data. Both curves almost fully
+  overlap except for a few spikes.
+
+    [image: measurement-noise.png]
+
+- At the very start of the signal there's still a small discrepancy.
+  This is the transition stuff I talked about above (infinitely fast
+  attack rate or not).
+
+    [image: attack.png]
 
 
-..... WIP .....
+* Next steps
+
+In the experiments in the previous posts I often got the problem that
+the prediction didn't match exactly with the measured data because I
+ignored the modulator operator in the prediction. Now we know how this
+works, so we could revisit those predictions.
+
+Another thing we didn't look at yet is the 'feedback' mechanism: the
+output of the modulator operator is feed-back to the input of the
+modulator to modulate itself.

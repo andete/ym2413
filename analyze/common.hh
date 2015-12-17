@@ -38,6 +38,8 @@ struct Patch {
 };
 
 Patch getSinePatch();
+void convert(const Patch& patch, uint8_t regs[8]);
+void printRegisters(const uint8_t regs[8]);
 void printPatch(const Patch& p);
 
 using Script = std::vector<uint16_t>;

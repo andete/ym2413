@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
 	auto bins = load(argv[1]);
 	auto raw  = load(argv[2]);
-	raw = average(raw, 64);
+	raw = average(raw, 512);
 	//printf("%zd %zd\n", bins.size(), raw.size());
 
 	assert(is_sorted(bins.begin(), bins.end()));

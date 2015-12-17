@@ -44,18 +44,19 @@ int main()
 		int l = lookupExp(i) / 16;
 		cout << i / 16 << '\t' << i << '\t' << l << '\t' << l + 256 << endl;
 	}*/
-	set<int> S;
+	//set<int> S;
 	for (int i = 0; i < 1024; ++i) {
 		int16_t s = lookupSin(i);
-		S.insert(lookupExp(s));
-		cout << i;
+		//S.insert(lookupExp(s));
+		cout << lookupExp(s + 16 * 123) + 256;
+		//cout << i;
 		     //<< '\t\ << s;
-		for (int v = 0; v < 16; ++v) {
-			cout << '\t' << lookupExp(s + 128 * v);
-		}
+		//for (int v = 0; v < 16; ++v) {
+		//	cout << '\t' << lookupExp(s + 128 * v);
+		//}
 		cout << endl;
 	}
-	cout << '#' << S.size() << endl;
+	//cout << '#' << S.size() << endl;
 }
 
 // Verified that EG levels are exact (take steps of 16, divide result by 16)

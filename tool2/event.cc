@@ -50,7 +50,7 @@ static uint8_t stopData[2]  = { 0xF3, 0x80 };
 static uint8_t reg1Data[2]  = { 0xD2, 0x80 };
 static uint8_t reg2Data[2]  = { 0xF2, 0x80 };
 
-static const unsigned MAX_SCRIPT_SIZE = 4 * 32;
+static const unsigned MAX_SCRIPT_SIZE = 4 * 1024;
 static union {
 	uint8_t scriptData[MAX_SCRIPT_SIZE];
 	uint16_t data16;

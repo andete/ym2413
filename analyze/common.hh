@@ -47,6 +47,7 @@ using Script = std::vector<uint16_t>;
 void init(const char* dev);
 
 void writeRegister(uint8_t reg, uint8_t val, Script& script);
+void writeRegisterDelay(uint8_t reg, uint8_t val, int delay, Script& script);
 void setInstrument(const Patch& patch, Script& script);
 void addReset(Script& script);
 void endScript(Script& script);

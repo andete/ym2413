@@ -9,6 +9,7 @@
 #include <cassert>
 #include <memory>
 #include <deque>
+#include <iostream>
 
 using namespace std;
 
@@ -80,6 +81,20 @@ void writeRegister(uint8_t reg, uint8_t val, Script& script)
 	// bit  8  A0
 	// bit 7-0 D7-D0
 	script.push_back(0xC00 | reg); script.push_back(1);      // WE
+	script.push_back(0x800 | reg); script.push_back(1);      // WE CS 
+	script.push_back(0xE00 | reg); script.push_back(12 - 2); //
+	script.push_back(0xD00 | val); script.push_back(1);      // WE A0
+	script.push_back(0x900 | val); script.push_back(1);      // WE CS A0 
+	script.push_back(0xF00 | val); script.push_back(84 - 2); // A0
+}
+void writeRegisterDelay(uint8_t reg, uint8_t val, int delay, Script& script)
+{
+	int d = std::max(1, delay - 95);
+	while (d > 65535) {
+		script.push_back(0xC00 | reg); script.push_back(65535); // WE
+		d -= 65535;
+	}
+	script.push_back(0xC00 | reg); script.push_back(d);      // WE
 	script.push_back(0x800 | reg); script.push_back(1);      // WE CS 
 	script.push_back(0xE00 | reg); script.push_back(12 - 2); //
 	script.push_back(0xD00 | val); script.push_back(1);      // WE A0
@@ -203,13 +218,14 @@ void handleRead()
 
 void handleWrite()
 {
-	if (!send.empty()) {
+	while (!send.empty()) {
 		//printf("O");
 		auto r = write(fd, send.data(), send.size());
 		if (r == -1) {
 			printf("write error");
 		}
-		send.clear();
+		send.erase(send.begin(), send.begin() + r);
+		//send.clear();
 	}
 }
 

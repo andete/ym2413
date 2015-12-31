@@ -1,6 +1,3 @@
-!!! DRAFT !!!
-
-
 * Introduction
 
 In this post we'll look in more detail at the ADSR envelopes. In an

@@ -335,7 +335,7 @@ RR state for a percussive tone is decaying. The measurements have shown
 that toggling the EG_TYPE bit switches between the SL/RR states in both
 diagrams (experiment d1). This again suggests that in the YM2413 both
 are implemented as a single state and the EG_TYPE selects the decay rate
-for this state (zero for EG_TYPE=1, and the RR-value for EG_TYPE=1).
+for this state (zero for EG_TYPE=1, and the RR-value for EG_TYPE=0).
 Note that the EG_TYPE bit also influences the decay rate for the
 'release' state from the previous paragraph (experiment d2).
 
@@ -500,9 +500,10 @@ easy to see. The modulator envelope can be seen in the 'density
 variation' of the curve. It's clearer if you zoom in, but I haven't
 included those zoomed images. I hope you trust me when I say that from
 this and similar experiments I can see that also for EG_TYPE=0 the
-modulator envelope behaves as expected, except that it also does not go
-to the (2nd) release phase when we switch KEY=OFF. Instead the envelope
-keeps decaying at the rate of the 1st release phase.
+modulator envelope behaves 'normally' (same as the carrier envelope),
+except that it also does not go to the (2nd) release phase when we
+switch KEY=OFF. Instead the envelope keeps decaying at the rate of the
+1st release phase.
 
 
 Side note: this means that the value of mod.RR is not used when mod.EG=1

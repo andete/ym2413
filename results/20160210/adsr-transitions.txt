@@ -1,0 +1,422 @@
+It's been a while since my last post. Partly because I took a little break and
+partly because it took me quite a while to figure this stuff out. Even though,
+in retrospect, the underlying mechanism isn't too difficult at all.
+
+
+
+* Introduction
+
+
+In this post I'll investigate the transitions between the attack-decay-sustain-
+release states in the ADSR-envelope in more detail. Take a look at this image:
+
+  [image: 1st-segment.png]
+
+This shows the attack- and decay-part of the envelope for a waveform with AR=6
+and DR=3. Notice that in both the attack and the decay phases there are segments
+of two different widths, following the pattern 'wide narrow narrow, wide narrow
+narrow, ...'. Also notice that the segment between attack and decay, encircled
+in green (more specifically this is the first segment of the decay phase), still
+has a different width than either of the repeating widths in the attack or decay
+phase.
+
+The same is true for the first segment of the release phase, or for the first
+segment after any transition: almost always this segment has a different width
+than the surrounding segments.
+
+Before going into more detail, let's first repeat what we already know about the
+envelope generator from previous investigations:
+
+   From the (4-bit) AR,DR,RR settings, the channel frequency and the KSR
+   setting, we calculate a 6-bit effective rate. This rate determines how
+   quickly the envelope changes.
+
+   The upper 4 bits of this rate select a bit in the global counter (this
+   counter increases every sample, so at ~49,7kHz). Only if the selected bit
+   toggles (in other words, after a selectable power-of-2 number of samples), we
+   execute the stuff in the next paragraph.
+
+   The lower 2 bits of the effective rate select 1 of 4 possible sequences:
+      0:  0,1,0,1,0,1,0,1    (4 out of 8)
+      1:  0,1,0,1,1,1,0,1    (5 out of 8)
+      2:  0,1,1,1,0,1,1,1    (6 out of 8)
+      3:  0,1,1,1,1,1,1,1    (7 out of 8)
+   From the global counter we take 3 bits, starting from the selected bit
+   (previous paragraph) and going to the left. Or in other words: take the
+   global counter, shift it down so that the selected bit is in position 0 and
+   take the lower 3 bits of that number. The resulting value (between 0-7)
+   selects a bit from the above sequence. Now only if that selected bit is '1'
+   we advance to the next envelope level.
+
+   (For very high rates, the rules are more complicated, but I'll refer to the
+   previous posts for those details. They aren't important for this post).
+
+
+
+* Measurements
+
+
+If we repeat the experiment from the introduction multiple times, we see that
+the width of the first segments varies. This section is all about measuring that
+phenomena.
+
+If we zoom in on the segment encircled in green in the above image, we get this:
+
+  [image: 1st-segment-zoomed.png]
+
+As I annotated in this image, I measure the width of a segment from the first
+peak of the segment to the first peak of the next segment. These peaks are the
+oscillations of the basis waveform (a sine wave in this case). So choosing a
+higher frequency allows to more accurately measure the segment width.
+
+In the hope of making the analysis simpler, I started measuring with the
+simplest pattern: "0,1,0,1,0,1,0,1" (4-out-of-8). This gives each segment in
+steady-state the same width. So all wide segments instead of narrow-narrow-wide
+like in the above images.
+
+Though this 4-out-of-8 pattern is only used for notes with low frequency (first
+two octaves, the BLOCK channel setting). So that limits the maximum frequency,
+and thus also the measuring accuracy. If I combine the maximum frequency (0x3ff)
+with the maximum multiplication factor (car.ML=15), the distance between two
+peaks is about 37 samples.
+
+Only after I already made a large number of measurements, I realized I could
+improve the accuracy by also measuring the corresponding segment mirrored around
+the x-axis (roughly speaking: this segment is shifted half a period in time and
+has 'opposite' amplitude). This allows to derive an upper and lower bound for
+the actual segment width.
+
+In the first set of measurements I looked at the transition between attack and decay
+for various settings of AR and DR. See the table below for the results:
+
+- In the rows AR varies between 1 and 8. In the columns DR varies between 1
+  and 7. Though I did not exhaustively measure every combination.
+- Per cell I sorted the measured segment widths from small to big. Some values
+  were obtained multiple times. Sometimes I annotated such duplicates (e.g. I
+  put '2x' in front), sometimes I forgot to annotate the duplicates (IOW I made
+  more measurements than shown in the table, but all uniquely observed values
+  should be present).
+- For most segments I measured the upper and lower bound. Though for the earlier
+  measurements I didn't do this yet. Those results are marked with '#'.
+- The results marked with '?' are likely errors (possibly I made some mistakes
+  while doing this repetitive work). They don't fit the pattern we'll discover
+  in the next section. I also couldn't reproduce those results when I went back
+  to them. (I could have cheated and left out those results ;-)
+- When AR is equal to DR, the first DR segment was often not visible. I mean
+  normally, at the end of the attack phase, there is a segment with Y=0 and
+  Y=511 (maximum amplitude), but not for this combination. So it's as-if when
+  the condition to transition from the attack to the decay phase triggers, this
+  also immediately triggers the condition to go from one level in the decay
+  phase to the next level. OTOH sometimes there is a single peak visible at
+  amplitude Y=0 or Y=511. These measurements are only accurate to 37 samples.
+  This means very narrow peaks can easily be missed, so for now I wrote '1' for
+  the segment with (and annotated it with '*'). But this needs more
+  investigation.
+    [image: single-peak.png]
+    [image: single-peak-zoom-top.png]
+    [image: single-peak-zoom-bottom.png]
+
+
+AR/DR||        1       |       2      |       3      |       4      |       5      |      6     |    7
+=====++================+==============+==============+==============+==============+============+============
+  1  ||  1(*)          |  0x800(#)    |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+  2  ||3x0x07f2-0x0814 |  1(*)        |  0x3f1-0x413 |              |              |            |
+     ||3x0x17fb-0x181d |              |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||  0x1bec-0x1c0e |  0x3f1-0x413 |  1(*)        |3x0x200(#)    |  0x100(#)    |  0x80(#)   |  0x40(#)
+     ||    0x0404(#)   |  0xbf5-0xc17 |              |              |              |            |
+     ||    0x047c(#)  ?|    0x3fc(#)  |              |              |              |            |
+  3  ||    0x0bfe(#)   |    0x402(#)  |              |              |              |            |
+     ||2x  0x0c04(#)   |    0x404(#)  |              |              |              |            |
+     ||    0x13fe(#)   |2x  0xbfc(#)  |              |              |              |            |
+     ||    0x1480(#)  ?|    0xc01(#)  |              |              |              |            |
+     ||    0x1bfe(#)   |2x  0xc03(#)  |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||  0x11f8-0x121a |  0x1f0-0x212 |3x0x1f0-0x212 |  1(*)        |2x0x100(#)    |2x0x80(#)   |2x0x40(#)
+  4  ||  0x15fb-0x161d |  0x5f2-0x614 |  0x5f1-0x613 |              |              |            |
+     ||  0x19fd-0x1a1f |  0xdf7-0xe19 |    0x200(#)  |              |              |            |
+     ||    0x0a05(#)   |    0x200(#)  |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||  0x04f2-0x0514 |  0x2f0-0x313 |  0x0f0-0x112 |2x0x0ef-0x111 |  1(*)        |2x0x80(#)   |2x0x40(#)
+  5  ||  0x08f3-0x0915 |  0x4f2-0x514 |  0x2f1-0x313 |3x0x2f1-0x312 |              |            |
+     ||  0x1aeb-0x1b0d |  0x8f4-0x916 |  0x6f3-0x715 |5x  0x300(#)  |              |            |
+     ||    0x0915(#)   |    0x100(#)  |    0x2fd(#)  |              |              |            |
+     ||    0x0cf5(#)   |    0x2ff(#)  |4x  0x4fc(#)  |              |              |            |
+     ||    0x0efe(#)   |    0x4fc(#)  |4x  0x700(#)  |              |              |            |
+     ||    0x14fc(#)   |    0x902(#)  |              |              |              |            |
+     ||    0x16fb(#)   |    0x97a(#) ?|              |              |              |            |
+     ||    0x1902(#)   |    0xeff(#)  |              |              |              |            |
+     ||    0x191d(#)   |              |              |              |              |            |
+     ||    0x1cfe(#)   |              |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||2x0x0167-0x0189 |  0x267-0x289 |  0x368-0x38a |  0x066-0x088 |  0x077-0x099 |  1(*)      |2x0x40(#)
+     ||  0x116f-0x1191 |  0x569-0x58b |  0x378-0x39c |  0x078-0x09a |  0x178-0x19a |            |
+  6  ||  0x1380-0x13a1 |  0xb51-0xb73?|  0x479-0x49b |2x0x167-0x189 |3x  0x080(#)  |            |
+     ||  0x1671-0x1693 |2x0xd7e-0xda0 |2x0x668-0x68a |  0x178-0x19a |2x  0x17f(#)  |            |
+     ||  0x1e74-0x1e97 |    0x386(#)  |  0x76a-0x78c |  0x379-0x39b |    0x199(#)  |            |
+     ||    0x0285(#)   |    0x580(#)  |2x  0x080(#)  |2x  0x080(#)  |              |            |
+     ||    0x0496(#)   |    0xa83(#)  |    0x182(#)  |    0x281(#)  |              |            |
+     ||    0x0c84(#)   |    0xb84(#)  |    0x284(#)  |2x  0x284(#)  |              |            |
+     ||    0x1485(#)   |    0xe80(#)  |    0x383(#)  |2x  0x380(#)  |              |            |
+     ||    0x1882(#)   |    0xf80(#)  |    0x484(#)  |    0x385     |              |            |
+     ||    0x1982(#)   |              |    0x580(#)  |              |              |            |
+     ||                |              |2x  0x680(#)  |              |              |            |
+     ||                |              |    0x77e(#)  |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||  0x00bc-0x00de |  0x0ac-0x0ce |  0x0ab-0x0cd |  0x124-0x146 |  0x033-0x055 |  0x33-0x55 |  1(*)
+     ||  0x0124-0x0146 |  0x1ad-0x1cf |  0x537-0x559 |  0x135-0x157 |  0x0ac-0x0cd |  0xbc-0xde |
+  7  ||2x0x04bf-0x04e1 |  0x436-0x458 |  0x6af-0x6d0 |  0x224-0x246 |  0x135-0x157 |   0x44(#)  |
+     ||  0x0536-0x0559 |  0xe2a-0xe4c |  0x7af-0x7d1 |  0x3bd-0x3df |    0x044(#)  |   0x45(#)  |
+     ||  0x0fb3-0x0fd5 |  0xfb2-0xfd4 |    0x156(#)  |    0x044(#)  |    0x045(#)  |   0xac(#)  |
+     ||  0x143e-0x1460 |              |    0x1be(#)  |    0x0ce(#)  |    0x0cd(#)  |2x 0xce(#)  |
+     ||                |              |    0x334(#)  |    0x156(#)  |    0x135(#)  |            |
+     ||                |              |2x  0x357(#)  |    0x1be(#)  |    0x156(#)  |            |
+     ||                |              |    0x4ae(#)  |    0x246(#)  |    0x1be(#)  |            |
+     ||                |              |    0x648(#)  |    0x2cf(#)  |    0x1dd(#)  |            |
+     ||                |              |              |2x  0x3be(#)  |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||                |              |              |  0x09a-0x0bc |  0x056-0x078 |  0x45-0x67 |4x0x11-0x33
+     ||                |              |              |  0x0cd-0x0ef |  0x0cd-0x0ef |3x0x56-0x78 |  0x56-0x78
+  8  ||                |              |              |  0x0de-0x100 |2x0x155-0x177 |2x0x9a-0xbc |
+     ||                |              |              |2x0x1de-0x200 |  0x189-0x1ab |2x0xde-0xff |
+     ||                |              |              |  0x2df-0x301 |              |            |
+     ||                |              |              |  0x3cf-0x3f1 |              |            |
+
+
+Next I made similar measurements for the decay-to-release transition. But
+because taking these measurements takes a long time (30-60 seconds per data
+point) I limited myself to DR=4,5. That should be sufficient because the pattern
+for this 2nd set of measurements (DR/RR) seems to be the same as for the 1st set
+(AR/DR).
+
+Actually the only difference between the two sets occurs when the row-value is
+equal to the column-value (AR==DR or DR==RR). Before we had a segment of 0 or 1
+sample, but now there's no exception when both rates are equal. It's as-if
+there's no transition at all.
+
+
+DR/RR||        1       |       2      |       3      |       4      |       5      |      6     |    7
+=====++================+==============+==============+==============+==============+============+============
+     ||  0x05e2-0x0604 |7x0x1ef-0x211 |  0x1df-0x201 |4x0x3f1-0x413 |6x0x0f1-0x112 |2x0x67-0x89 |2x0x22-0x44
+  4  ||  0x09f5-0x0a17 |3x0x5f3-0x615 |2x0x1ef-0x211 |              |              |6x0x78-0x9a |6x0x33-0x55
+     ||  0x15e8-0x160a |3x0xde6-0xe08 |2x0x5f1-0x613 |              |              |            |
+     ||2x0x19eb-0x1a0d |              |              |              |              |            |
+     ||2x0x1dee-0x1e10 |              |              |              |              |            |
+-----++----------------+--------------+--------------+--------------+--------------+------------+------------
+     ||2x0x0cf5-0x0d17 |  0x2f0-0x312 |  0x2f1-0x313 |3x0x0ee-0x111 |3x0x1ef-0x211 |5x0x67-0x89 |7x0x34-0x56
+  5  ||2x0x12e8-0x130a |  0x6f2-0x714 |2x0x4f1-0x514 |3x0x2ef-0x312 |              |4x0x78-0x9a |
+     ||  0x18fb-0x191d |  0x8f3-0x915 |2x0x6f2-0x714 |              |              |            |
+     ||                |  0xef7-0xf19 |              |              |              |            |
+
+
+
+* Finding a pattern in the measurements
+
+
+Next I tried to pick nice 'round' numbers that fall within the error margins of
+all the measurements. E.g. for the combination AR=4/DR=2 such numbers are
+'0x200, 0x600 and 0xe00'. That seems to match the formula '0x200 + n * 0x400'.
+And when I made more measurements for this combination, I eventually also found
+a segment with width 0xa00. This confirms that formula. So in the table below
+for AR=4/DR=2 I wrote '0x200 0x600 0xa00 0xe00'.
+
+Actually for all the combinations with DR < AR (or DR < RR) I found a similar
+pattern: all the observed segment widths seem to match this formula:
+   first-segment-length = (2n + 1) * L
+   with: L = 1 << (13 - AR)
+Note that L is also the required number of steps of the global counter described
+in the introduction.
+
+As already mentioned before, when AR == DR, the first segment was often not
+visible or only 1 sample wide. We still need to investigate this further. On the
+other hand DR == RR is nothing special.
+
+When 'DR > AR' (or RR > DR), the pattern is simple:
+   first-segment-length = 1 << (13 - DR)
+Note that this is half of all the later segments in the decay (or release)
+phase. Or in other words, the first segment is always a narrow segment while all
+later segments are wide (for these low frequencies (4-out-of-8 pattern) we only
+have wide segments in steady-state).
+
+
+AR/DR||       1       |      2      |      3      |      4      |      5      |  6   |  7
+=====++===============+=============+=============+=============+=============+======+======
+  1  || 1(*)          | 0x800       |             |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+  2  || 0x0800 0x1800 | 1(*)        | 0x400       |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+  3  || 0x0400 0x1400 | 0x400       | 1(*)        | 0x200       | 0x100       | 0x80 | 0x40
+     || 0x0c00 0x1c00 | 0xc00       |             |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     || 0x0200 0x1200 | 0x200       | 0x200       | 1(*)        | 0x100       | 0x80 | 0x40
+  4  || 0x0600 0x1600 | 0x600       | 0x600       |             |             |      |
+     || 0x0a00 0x1a00 | 0xa00       |             |             |             |      |
+     || 0x0e00 0x1e00 | 0xe00       |             |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     || 0x0100   ...  | 0x100 0x900 | 0x100       | 0x100       | 1(*)        | 0x80 | 0x40
+  5  || 0x0300 0x1b00 | 0x300 0xb00 | 0x300       | 0x300       |             |      |
+     || 0x0500 0x1d00 | 0x500 0xd00 | 0x500       |             |             |      |
+     ||  ...   0x1f00 | 0x700 0xf00 | 0x700       |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     || 0x0080   ...  | 0x080  ...  | 0x080 0x480 | 0x080       | 0x080       | 1(*) | 0x40
+  6  || 0x0180 0x1d80 | 0x180 0xd80 | 0x180 0x580 | 0x180       | 0x180       |      |
+     || 0x0280 0x1e80 | 0x280 0xe80 | 0x280 0x680 | 0x280       |             |      |
+     ||  ...   0x1f80 |  ...  0xf80 | 0x380 0x780 | 0x380       |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     || 0x0040  ...   | 0x040  ...  | 0x040  ...  | 0x040 0x240 | 0x040       | 0x40 | 1(*)
+  7  || 0x00c0 0x1ec0 | 0x0c0 0xec0 | 0x0c0 0x6c0 | 0x0c0 0x280 | 0x0c0       | 0xc0 |
+     || 0x0140 0x1f40 | 0x140 0xf40 | 0x140 0x740 | 0x140 0x340 | 0x140       |      |
+     ||  ...   0x1fc0 |  ...  0xfc0 |  ...  0x7c0 | 0x1c0 0x3c0 | 0x1c0       |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     ||               |             |             | 0x020  ...  | 0x020 0x120 | 0x20 | 0x20
+  8  ||               |             |             | 0x060 0x360 | 0x060 0x160 | 0x60 | 0x60
+     ||               |             |             | 0x0a0 0x3a0 | 0x0a0 0x1a0 | 0xa0 |
+     ||               |             |             |  ...  0x3e0 | 0x0e0 0x1e0 | 0xe0 |
+
+
+DR/RR||       1       |      2      |      3      |      4      |      5      |  6   |  7
+=====++===============+=============+=============+=============+=============+======+======
+     || 0x0200 0x1200 | 0x200       | 0x200       | 0x400       | 0x100       | 0x80 | 0x40
+  4  || 0x0600 0x1600 | 0x600       | 0x600       |             |             |      |
+     || 0x0a00 0x1a00 | 0xa00       |             |             |             |      |
+     || 0x0e00 0x1e00 | 0xe00       |             |             |             |      |
+-----++---------------+-------------+-------------+-------------+-------------+------+------
+     || 0x0100  ...   | 0x100 0x900 | 0x100       | 0x100       | 0x200       | 0x80 | 0x40
+  5  || 0x0300 0x1b00 | 0x300 0xb00 | 0x300       | 0x300       |             |      |
+     || 0x0500 0x1d00 | 0x500 0xd00 | 0x500       |             |             |      |
+     ||  ...   0x1f00 | 0x700 0xf00 | 0x700       |             |             |      |
+
+
+
+* A model to explain the measurements
+
+
+Let's again take AR=4/DR=2 as an example.
+- AR=4 means that every 0x200 steps there's an 'event' in the attack curve and
+  for this specific channel frequency 1 out of 2 times (4 out 8 in the
+  0,1,0,1,0,1,0,1 pattern) we actually advance to the next AR level.
+- DR=2 means an event every 0x800 samples and with the 4-out-of-8 stuff, it
+  means we advance a DR level every 0x1000 samples.
+
+Note that, in general, when the attack phase starts, the value of the global
+counter is random. In this example, when the attack phase ends we've just
+processed an AR event with a '1' in the 4-out-8 table and that occurs only
+every 0x400 samples. On the other hand, in this example, DR only effectively
+advances every 0x1000 samples. Not 0x10000 _starting_ from the end of attack,
+but when the global counter reaches the next multiple of 0x10000 (this is not
+100% correct, see next paragraphs). The lower bits of the global counter could
+already have reached 0xc00, so the next multiple of 0x1000 is only 0x400 samples
+away, But it could also be 0x800, 0xc00 or 0x1000 samples till the next multiple
+of 0x10000. This already explains why, in this particular example, there are 4
+possible initial segment lengths. It does not yet explain why these lengths are
+actually 0x200, 0x600, 0xa00, 0xe00 rather than 0x400, 0x800, 0xc00, 0x1000.
+That is '(2n+1) * L' rather than '2n * L'.
+
+To explain the '2n+1' stuff we need to take a more detailed look at the
+0,1,0,1,0,1,0,1 stuff. I was writing a c++ model for this phenomena and then I
+realized that there are two possible (evenly-spaced) 4-out-of-8 sequences:
+ - 0,1,0,1,0,1,0,1  -> gives  0x200 0x600 0xa00 0xe00
+ - 1,0,1,0,1,0,1,0  -> gives  0x400 0x800 0xc00 0x1000
+One of these gives 0x200,0x600,0xa00,0xe00, the other gives 0x400,0x800,0xc00,
+0x10000. We observed the first segment width, so the first sequence must be the
+correct one. Looking back this behavior is very logical, but it took me some
+time to realize this.
+
+For reference I've included the c++ code for the model, but I won't discuss it
+further:
+  [source code: ar-dr.cc]
+
+
+
+* Extend to higher frequencies
+
+
+So far all measurements/models were done for frequency 0x3ff, those use the
+4-out-of-8 '0,1,0,1,0,1,0,1' pattern. Higher frequencies use 5,6,7-out-of-8
+patterns.
+
+Above I did a lot of (time consuming) measurements for various combinations of
+AR/DR/RR. But after I understood the underlying model I realized it's probably
+enough to limit myself to a single AR/DR combination. I choose AR=5/DR=2.
+
+- 5-out-of-8
+  I measured lengths:
+      0x100 0x300 0x400 0x500 0x700 0x900 0xb00 0xc00 0xd00 0xf00
+  Side note: I relatively quickly obtained 1,3,4,5,7,9,c,d,f. But it literally
+  took over 50 attempts before I finally also observed length 0xb00, which I
+  suspected should be there. (The c++ model confirms that some lengths are also
+  more likely to be observed than others, and 0xb00 is a less likely length),
+
+  Possible 5-out-of-8 patterns are:
+      1,1,0,1,0,1,0,1
+      0,1,1,1,0,1,0,1
+      0,1,0,1,1,1,0,1   <-- only this one matches the measurements
+      0,1,0,1,0,1,1,1
+      1,1,1,0,1,0,1,0
+      1,0,1,1,1,0,1,0
+      1,0,1,0,1,1,1,0
+      1,0,1,0,1,0,1,1
+
+- 6-out-of-8
+  I measured these lengths:
+     0x100 0x200 0x300 0x500 0x600 0x700 0xa00 0xd00 0xe00
+  The model predicts 0x900 0xb00 0xf00 should also be present (with lower
+  probability), but I didn't keep on measuring until I actually observed those
+  values. The current measurements were already enough to exclude the other
+  possible patterns (see below).
+
+  Possible 6-out-of-8 patterns are:
+      1,1,0,1,1,1,0,1
+      0,1,1,1,0,1,1,1 <-- this one matches the measurements
+      1,1,1,0,1,1,1,0
+      1,0,1,1,1,0,1,1
+
+- 7-out-of-8
+  I measured these lengths:
+     0x100 0x200 0x300 0x400 0x500 0x600 0x700 0xb00 0xc00
+  The values 0x{9,a,d,e,f}00 should also be present (only 0x800 and 0x1000 are
+  missing). But these measurements can already exclude the other patterns below.
+
+  Possible 7-out-of-8 patterns are:
+      0,1,1,1,1,1,1,1 <-- this one matches the measurements
+      1,1,0,1,1,1,1,1
+      1,1,1,1,0,1,1,1
+      1,1,1,1,1,1,0,1
+      1,0,1,1,1,1,1,1
+      1,1,1,0,1,1,1,1
+      1,1,1,1,1,0,1,1
+      1,1,1,1,1,1,1,0
+
+
+
+* Conclusion
+
+
+We found that the model we had for the envelope steps already could explain the
+initial segment lengths after a AR->DR or DR->RR transition. And although I
+didn't measure this, I'm confident it will also correctly model the initial
+segment after a RR->DP or DP->AR transition.
+
+We also found the exact 4,5,6,7-out-of-8 sequences, namely
+  4-out-of-8:  0,1,0,1,0,1,0,1
+  5-out-of-8:  0,1,0,1,1,1,0,1
+  6-out-of-8:  0,1,1,1,0,1,1,1
+  7-out-of-8:  0,1,1,1,1,1,1,1
+     Side note:
+       seq-5 OR'ed with seq-6 gives seq-7
+       OR'ing seq-4 with any other sequence simply give that other sequence
+     This is not relevant for a software implementation, but it might give a
+     clue to how the actual hardware circuit is structured (the 4 patterns are
+     somewhat like a 2-bit binary counter).
+
+And if we look at the various emulator cores written by Jarek Burczynski (e.g.
+YM2413 but also YM2151 and YMF262), they contain exactly these sequences. So
+kudos to Jarek!
+
+So actually, if I hadn't done any of the investigations in this post. The
+emulation would (probably) have been exactly the same. But still, it's nice to
+better understand why this weird initial segment length stuff is happening. And
+even better it's nice to know that the sequences used by Jarek Burczynski are
+really the same sequences as used by the YM2413.
+

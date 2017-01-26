@@ -1,0 +1,888 @@
+It's (again) been a long time since I last wrote about the YM2413 reverse
+engineering. The last several months I was trying to figure out the details of
+the envelope attack curve. Though mostly without success, so there wasn't much
+to report in the first place.
+
+The month I've been helping Eugeny Brychkov to add MSX-MUSIC support in GR8NET.
+Possibly because of the discussions with Eugeny I looked at things from a
+different perspective and got an idea for a new experiment that led to the
+breakthrough I've been hoping for. More on this in the second half of this
+post.
+
+In the first part of this post I'll continue where the last post left off. I'll
+present a C++ model of the YM2413 that includes all the stuff we've found out
+so far.
+
+
+
+
+
+1) C++ model
+
+At the end of the previous post (20160716) we developed a C++ model that can
+generate output samples for a single YM2413 channel with the following
+features:
+ - modulator connected to carrier
+ - feedback from modulator to itself
+ - channel volume handling
+ - different waveforms
+ - correct (bit-exact) log-sine and exponential tables
+ - mute for small signals
+
+Though that's far from all the YM2413 features we've investigated so far. In
+particular the following features are still missing:
+ - channel frequency setting
+ - key on/off handling
+ - vibrato and amplitude modulation
+ - changing envelope over time
+
+So let's fix that.
+
+
+I created the new model in a few intermediate steps. I'll quickly highlight the
+changes in each step. But I won't go over the code in detail because there's no
+new information in it and I hope the code itself is self-explanatory (at least
+with the information from these posts in mind).
+
+
+* step 1    [ see model1.cc ]
+
+  This starts from the previous model (previous post). It doesn't add anything
+  new, it only restructures the code somewhat: data is grouped into structures
+  and free standing functions are turned into member functions. This change is
+  also a preparation to support multiple sound channels in the future.
+
+
+* step 2    [ see model2.cc ]
+
+  This step adds a global counter to the YM2413 model and uses it to implement
+  (per operator) amplitude modulation.
+
+
+* step 3    [ see model3.cc ]
+
+  This step adds phase calculations, these are:
+   - phase step size (controlled by channel frequency)
+   - (per operator) frequency modulation (is actually phase modulation)
+
+
+* step 4    [ see model4.cc ]
+
+  The main change in this step is the addition of the envelope calculations.
+  This envelope stuff is the least-well understood part of the YM2413 (so far),
+  in particular the attack part of the envelope. But hopefully that also means
+  that the implementation can still be simplified in the future. (See the 2nd
+  part of this post for more info on the attack curve).
+
+
+These 4 source files (model{1,2,3,4}.cc) share 1 header file 'tables.hh'. As
+the name suggests, that file contains some tables that are used by the
+model(s). Though for most of these tables I've discovered a simple hardware
+implementation. So the real hardware does not store that information in a ROM
+but instead calculates it with logic functions. OTOH an efficient software
+implementation might still want to use some of these tables.
+
+
+Disclaimer:
+ To the best of my knowledge model4.cc can reproduce all the YM2413 features
+ we've investigated, with exception of the envelope attack curves. BUT I must
+ also admit that, so far, I've done far too little verification on this model
+ (it's on my TODO list). So there may still be bugs.
+
+
+
+
+
+2) Envelope attack curve
+
+Now the more interesting part of this post ...
+
+
+
+2.1) Past experiments
+
+Let's first quickly recap how we investigated the attack curve in the past.
+Check this picture from an older post:
+
+  [ image: 20150327/attack-rate20.png ]
+
+In that experiment we combine a not too fast attack-rate with a high-enough
+frequency. We see that that there are multiple plateaus in the attack curve.
+From the maximum amplitude of the signal in each plateau we can derive the
+corresponding envelope level. Remember envelope level is a value between 0 and
+127 where 0 maps to 0dB and 127 maps to -47.625dB (0.375dB per step). So a
+higher envelope level corresponds to a lower amplitude.
+
+From this experiment we derived that during attack the envelope level seems to
+follow one of these two paths:
+
+   {112-127}, {91- 95}, {71-72}, 53, 39, 28, 20, 13,  9, 5, 1, 0
+   {112-127}, {96-102}, {73-74}, 55, 41, 29, 21, 14, 10, 6, 2, 0
+
+Note that for high envelope levels there are multiple levels that have the same
+maximum amplitude. So by measuring the amplitude we cannot always uniquely
+identify the envelope-level. That's why the first 3 items in these paths have a
+range of possible levels.
+
+First problem:
+I've tried _very_hard_, but I've been unable to come up with a simple formula
+that can explain this sequence ..., 53, 39, 28, 20, 13, ... All other things
+we've discovered about the YM2413 could be explained by simple hardware
+circuits, but this sequence is a mystery.
+
+Second problem:
+This measurement setup only allows to measure relatively slow attack rates.
+From measurements on the decay curve we know that the very fast decay rates
+behave in a special way, so likely there's something similar going on for the
+attack rates. For example the YM2413 data sheet lists a duration of 140us for
+the fastest attack rate, that's only 7 samples long (@49.7kHz). But the
+envelope path shown above has 12 distinct values, so it cannot be used for the
+fastest attack rates.
+
+
+The underlying problem of this experiment is that the phase of the sine wave is
+reset to zero at the start of the attack phase (and sin(0) = 0). And fast
+attack rates don't last long enough for the sine to reach max amplitude (phase
+= 90 degrees). If only there was a way to 'postpone' the attack curve until the
+phase has reached 90 degrees ...
+
+
+
+2.2) New experiments
+
+... Yes, if only we could 'postpone' the attack curve ...
+
+Let's try setting the attack rate to zero. Then wait some time for the phase to
+reach 90 degrees. And only then switch to the desired attack rate. More in
+detail I ran experiments with these settings:
+
+  mod={AM=0 PM=0 EG=0 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=00 SL=00 RR=15}
+  car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=00 DR=00 SL=00 RR=15}
+      reg#0x10 = 0x10    a very low frequency
+      reg#0x20 = 0x04    key-off
+      reg#0x30 = 0x00    max volume / custom instrument
+      <delay 1000 samples>
+      reg#0x20 = 0x14    key-on
+      <delay 4096 samples>
+      reg#0x05 = 0xE0    select attack=14
+
+This results in a measurement like this:
+
+  [ image: experiment-setup.png ]
+
+On the left the graph shows a small part of a sine, this belongs to the
+previous experiment. Around x=1600 we set key=off and the signal drops to zero
+(signal=0 corresponds to y=255 in this graph). After some time we set key=on,
+but the signal remains zero because attack=0. Around x=6700 we set attack to a
+non-zero value and the amplitude rapidly rises to maximum. It's important to
+choose the delay between key=on and attack=non-zero precisely so that the phase
+reaches 90 degrees (sine has maximum amplitude).
+
+In the graph above the attack curve was a vertical line. But if we zoom-in the
+attack curve looks as follows:
+
+   [ image: attack-curve.png ]
+
+As in all my measurements graphs y=255 maps to +0 and y=0 maps to +255, so this
+graph actually shows a signal that's rising in amplitude.
+
+Notice how the curve stays flat once the maximum amplitude is reached. That's
+because in this example I had chosen a very low frequency, so each entry from
+the YM2413's sine table is repeated 512 times. And also the top of the sine
+itself is 'flat'. So we really have several thousands of samples where the
+output remains at maximum amplitude (and this is needed to measure the slower
+attack rates).
+
+Also notice that the curve has 12 plateaus, these match with the envelope
+levels we already obtained from the old experiment:
+
+   {112-127}, {96-102}, {73-74}, 55, 41, 29, 21, 14, 10, 6, 2, 0
+
+BUT if we zoom in closer we see something like this:
+
+   [ image: attack-curve-zoomed.png ]
+
+For clarity I marked all samples with 'x' on this graph. We again see the
+plateaus. But instead of jumping from one plateau to the next, the signal takes
+3 intermediate steps!
+
+This last zoomed graph showed the curve for attack rate 10:0 (effective rate =
+4*10+0 = 40). From earlier investigations we expect to see plateaus that are 16
+samples long for this rate. Instead we see lengths of 13 plus 3 extra samples.
+This is true for all attack rates less than 12:0: we always see plateaus of
+length 'pow(2, n) - 3' plus 3 intermediate steps.
+
+Let's analyze this new attack curve in more detail. We'll first look at the
+'slow' attack rates (less than 12:0). We'll also separately look at the timing
+of the steps and the envelope levels that each step visits.
+
+
+
+2.3) Envelope levels
+
+So let's initially ignore the timing of the attack curve. In this subsection we
+will only look at the amplitude of the signal. As before we can translate the
+measured amplitude into envelope levels, and that gives the following sequence
+(remember for the first few values we can't map the amplitude to a unique
+envelope level, so there's an uncertainty interval):
+
+   {112-127} {103-111} {103-111} {96-102}
+    {87-90}   {84-86}   {78-79}  {73-74}
+      68        63        59       55
+      51        47        44       41
+      38        35        32       29
+      27        25        23       21
+      19        17        15       14
+      13        12        11       10
+       9         8         7        6
+       5         4         3        2
+       1         0
+
+Now guess what happens if you only look at ever 4th value in this sequence (I
+conveniently formatted the sequence in 4 columns): you get the sequence we
+observed in our old experiment!
+
+For the old sequence I was unable to come with a simple formula, but for this
+new 4x longer sequence it's fairly easy. The latter values in the series (for
+which there is no uncertainty) match exactly with:
+
+    f4(x) := x - (x >> 4) - 1
+
+For reasons that will become clear later, we'll call this "formula-4" or just
+'f4'. So take the current envelope value, divide that by 16 and round down.
+Subtract this from the current value and then subtract one more.
+
+We can also apply this formula in reverse to try to determine a more precise
+value for the initial steps that have an uncertainty interval. It turns out
+that the following sequence is the _only_one_ that both matches 'f4' and all
+uncertainty intervals.
+
+   127 119 111 104 97 90 84 78 73 68 63 59 55 51 47 44
+    41  38  35  32 29 27 25 23 21 19 17 15 14 13 12 11
+    10   9   8   7  6  5  4  3  2  1  0
+
+In other words, if we start at envelope level 127 and iteratively apply 'f4' we
+get our measured sequence.
+
+But what if we start from a different level? Let's say from level 124. That
+results in:
+
+   124 116 108 101 94 88 82 76 71 66 61 57 53 49 45 42
+    39  36  33  30 28 26 24 22 20 18 16 14 13 12 11 10
+     9   8   7   6  5  4  3  2  1
+
+And if we pick every 4th element from this sequence we get the other common
+sequence we obtained from the old experiment.
+
+
+
+2.4) Envelope timing (slow rates)
+
+In the previous subsection we figured out which envelope levels the attack
+curve visits in sequence. The only thing left is figuring out the timing. In
+other words: when to jump from one level to the next.
+
+To do this we first need more measurements of different attack rates. Visually
+all these attack curves look similar to the graphs I've shown above, so I won't
+show any more graphs. Instead I'll present (some of) the measurements in table
+form:
+
+   attack: 7:0                           attack: 10:0
+     sample   |amplitude|env-level         sample  |amplitude|env-level
+   -----------+---------+---------       ----------+---------+---------
+       0      |     1   | 112-127           0-12   |     1   | 112-127
+       1      |     2   | 103-111          13      |     2   | 103-111
+       2      |     2   | 103-111          14      |     2   | 103-111
+       3-127  |     3   |  96-102          15      |     3   |  96-102
+     128      |     5   |  87-90           16-28   |     5   |  87-90
+     129      |     6   |  84-86           29      |     6   |  84-86
+     130      |     8   |  78-79           30      |     8   |  78-79
+     131-255  |    10   |  73-74           31      |    10   |  73-74
+     255      |    13   |  68              32-44   |    13   |  68
+     257      |    16   |  63              45      |    16   |  63
+     258      |    19   |  59              46      |    19   |  59
+     259-383  |    23   |  55              47      |    23   |  55
+     384      |    28   |  51              48-60   |    28   |  51
+     385      |    33   |  47              61      |    33   |  47
+     386      |    37   |  44              62      |    37   |  44
+     387-511  |    43   |  41              63      |    43   |  41
+     512      |    49   |  38              64-76   |    49   |  38
+     513      |    56   |  35              77      |    56   |  35
+     514      |    63   |  32              78      |    63   |  32
+     515-639  |    72   |  29              79      |    72   |  29
+     640      |    79   |  27              80-92   |    79   |  27
+     641      |    86   |  25              93      |    86   |  25
+     642      |    94   |  23              94      |    94   |  23
+     643-767  |   102   |  21              95      |   102   |  21
+     768      |   112   |  19              96-108  |   112   |  19
+     769      |   122   |  17             109      |   122   |  17
+     770      |   133   |  15             110      |   133   |  15
+     771-895  |   139   |  14             111      |   139   |  14
+     896      |   145   |  13             112-124  |   145   |  13
+     897      |   151   |  12             125      |   151   |  12
+     898      |   158   |  11             126      |   158   |  11
+     899-1023 |   165   |  10             127      |   165   |  10
+    1024      |   172   |   9             128-140  |   172   |   9
+    1025      |   180   |   8             141      |   180   |   8
+    1026      |   188   |   7             142      |   188   |   7
+    1027-1151 |   196   |   6             143      |   196   |   6
+    1152      |   205   |   5             144-156  |   205   |   5
+    1153      |   214   |   4             157      |   214   |   4
+    1154      |   224   |   3             158      |   224   |   3
+    1155-1279 |   234   |   2             159      |   234   |   2
+    1280      |   244   |   1             160-172  |   244   |   1
+    1281-...  |   255   |   0             173-...  |   255   |   0
+
+These two tables show the attack curves for respectively attack rate 7:0 and
+10:0 (effective rates 7*4+0 = 28 and 10*4+0 = 40). Each table has 3 columns.
+ - The 1st column is the sample number (the time axis in the graphs). I aligned
+   each measurement so that the first non-zero amplitude corresponds to
+   sample=0. If there's a range in this column it means that multiple samples
+   have the same amplitude.
+ - The 2nd column is the measured amplitude of the signal for this (range of)
+   sample(s). Remember that in this experiment we eliminated the influence of
+   the sine wave on the amplitude, so the measured amplitude directly
+   corresponds to the envelope level.
+ - The 3rd column is calculated from the 2nd column. It's the envelope level
+   (or the interval of possible levels) that correspond to the measured
+   amplitude.
+
+The first observation is that the envelope levels for both attack rates are the
+same (and the same as the levels for any attack rate below 12:0). This sequence
+was already explained in the previous subsection.
+
+A second observation is that we indeed see repeated groups of 3 single values
+followed by a plateau. We already saw that (visually) in section 2.2.
+
+Note however that the plateaus are not always located on the same envelope
+level. To double check this I made a series of measurements of the same attack
+rate. So the following 3 tables are from running the exact same experiment
+multiple times.
+
+   attack: 11:0  (multiple measurements of the same rate)
+    sample |amplitude|env-level      sample |amplitude|env-level      sample |amplitude|env-level
+   --------+---------+---------     --------+---------+---------     --------+---------+---------
+     0     |     1   | 112-127        0-4   |     1   | 112-127        0     |   1     | 112-127
+     1     |     2   | 103-111        5     |     2   | 103-111        1     |   2     | 103-111
+     2     |     2   | 103-111        6     |     2   | 103-111        2-7   |   2     | 103-111
+     3-7   |     3   |  96-102        7     |     3   |  96-102        7     |   3     |  96-102
+     8     |     5   |  87-90         8-12  |     5   |  87-90         8     |   5     |  87-90
+     9     |     6   |  84-86        13     |     6   |  84-86         9     |   6     |  84-86
+    10     |     8   |  78-79        14     |     8   |  78-79        10-14  |   8     |  78-79
+    11-15  |    10   |  73-74        15     |    10   |  73-74        15     |   10    |  73-74
+    16     |    13   |  68           16-20  |    13   |  68           16     |   13    |  68
+    17     |    16   |  63           21     |    16   |  63           17     |   16    |  63
+    18     |    19   |  59           22     |    19   |  59           18-22  |   19    |  59
+    19-23  |    23   |  55           23     |    23   |  55           23     |   23    |  55
+    24     |    28   |  51           24-28  |    28   |  51           24     |   28    |  51
+    25     |    33   |  47           29     |    33   |  47           25     |   33    |  47
+    26     |    37   |  44           30     |    37   |  44           26-30  |   37    |  44
+    27-31  |    43   |  41           31     |    43   |  41           31     |   43    |  41
+    32     |    49   |  38           32-36  |    49   |  38           32     |   49    |  38
+    33     |    56   |  35           37     |    56   |  35           33     |   56    |  35
+    34     |    63   |  32           38     |    63   |  32           34-38  |   63    |  32
+    35-39  |    72   |  29           39     |    72   |  29           39     |   72    |  29
+    40     |    79   |  27           40-44  |    79   |  27           40     |   79    |  27
+    41     |    86   |  25           45     |    86   |  25           41     |   86    |  25
+    42     |    94   |  23           46     |    94   |  23           42-46  |   94    |  23
+    43-47  |   102   |  21           47     |   102   |  21           47     |   102   |  21
+    48     |   112   |  19           48-52  |   112   |  19           48     |   112   |  19
+    49     |   122   |  17           53     |   122   |  17           49     |   122   |  17
+    50     |   133   |  15           54     |   133   |  15           50-54  |   133   |  15
+    51-55  |   139   |  14           55     |   139   |  14           55     |   139   |  14
+    56     |   145   |  13           56-60  |   145   |  13           56     |   145   |  13
+    57     |   151   |  12           61     |   151   |  12           57     |   151   |  12
+    58     |   158   |  11           62     |   158   |  11           58-62  |   158   |  11
+    59-63  |   165   |  10           63     |   165   |  10           63     |   165   |  10
+    64     |   172   |   9           64-68  |   172   |   9           64     |   172   |   9
+    65     |   180   |   8           69     |   180   |   8           65     |   180   |   8
+    66     |   188   |   7           70     |   188   |   7           66-70  |   188   |   7
+    67-71  |   196   |   6           71     |   196   |   6           71     |   196   |   6
+    72     |   205   |   5           72-76  |   205   |   5           72     |   205   |   5
+    73     |   214   |   4           77     |   214   |   4           73     |   214   |   4
+    74     |   224   |   3           78     |   224   |   3           74-78  |   224   |   3
+    75-79  |   234   |   2           79     |   234   |   2           79     |   234   |   2
+    80     |   244   |   1           80-84  |   244   |   1           80     |   244   |   1
+    80-... |   255   |   0           85-... |   255   |   0           81-... |   255   |   0
+
+Again we see the same sequence of envelope levels. We also see 3 single steps
+followed by a plateau (only a short plateau of 5 samples for this relatively
+high rate).
+
+And indeed the position of the plateaus is different in the 3 tables. In the
+1st table the plateau starts on sample 3 while in the 2nd and 3rd table it's
+respectively at sample 0 and 2. I actually had to make many measurements before
+I got these 3 different results. Most of the time I got the 1st table, a few
+times I got table 2 and only on my 10th attempt I got table 3. I'm confident
+that if I continued making more measurements I'd also see a version with the
+plateau on sample 1, but I didn't have the patience to do that ;-)
+
+Notice how the total length of the attack curve is slightly different in these
+3 versions. Even though it's for the exact same attack rate. But we had
+something similar for the decay curve. There it could be explained by a global
+counter (see earlier posts for more details). Here we'll use a similar
+explanation.
+
+
+
+2.5) Envelope timing algorithm
+
+Let's first _very_briefly_ recap the algorithm for decay. For more details
+check the post about EG-decay.
+
+Decay:
+a) From the effective rate calculate two values:
+       eg_shift = 13 - (rate / 4)
+       eg_select = rate & 3
+b) There's a global (shared) counter that's incremented by one every sample.
+c) Take the value of that counter and shift it down over 'eg_shift' number of
+   bits. Only if all the bits that were shifted out are zero we go to the next
+   step. IOW if any bit was a 1 the envelope level does not change.
+d) Next take this table
+       0,1,0,1,0,1,0,1
+       0,1,0,1,1,1,0,1
+       0,1,1,1,0,1,1,1
+       0,1,1,1,1,1,1,1
+   Select the row indicated by 'eg_select' and the column indicated by the 3
+   LSB bits of the downshifted global counter value. If that position in the
+   table is a '1' then increment the envelope level by one, if it was '0' then
+   do nothing.
+
+With only small tweaks we can make this algorithm work for attack
+
+Attack:
+a) Calculate 'eg_shift' and 'eg_select' in the same way.
+b) Use the same global counter.
+c) Shift the global counter down over 'eg_shift' number of bits. Check whether
+   all shifted-out bits are zero, but IGNORE the 2 LSB bits. That is the first
+   two shifted out bits can have any value, but all following bits must be
+   zero.
+d) Use the same table and column/row selection mechanism as above. But now when
+   there is a '1' in the table, change the current envelope level via formula
+   'f4' (if there's a '0' do nothing).
+
+
+All the measurements I've shown so far had 'eg_select=0'. So they all use the
+first row in the 8x4-bit-pattern-table and thus they all have a very regular
+timing pattern. Let's also check the other patterns. Below are measurements for
+rates 11:0 to 11:3 (effective rates 44 to 47).
+
+   attack : 11:0         attack : 11:1         attack : 11:2         attack : 11:3
+  sample |env-level     sample |env-level     sample |env-level     sample |env-level
+ --------+---------    --------+---------    --------+---------    --------+---------
+   0     | 112-127       0     | 112-127       0     | 112-127       0     | 112-127
+   1     | 103-111       1     | 103-111       1     | 103-111       1     | 103-111
+   2     | 103-111       2     | 103-111       2     | 103-111       2     | 103-111
+   3-7   |  96-102       3-7   |  96-102       3     |  96-102       3     |  96-102
+   8     |  87-90        8     |  87-90        4     |  87-90        4     |  87-90
+   9     |  84-86        9     |  84-86        5     |  84-86        5     |  84-86
+  10     |  78-79       10     |  78-79        6     |  78-79        6     |  78-79
+  11-15  |  73-74       11     |  73-74        7     |  73-74        7     |  73-74
+  16     |  68          12     |  68           8     |  68           8     |  68
+  17     |  63          13     |  63           9-13  |  63           9     |  63
+  18     |  59          14     |  59          14     |  59          10     |  59
+  19-23  |  55          15     |  55          15     |  55          11     |  55
+  24     |  51          16     |  51          16     |  51          12     |  51
+  25     |  47          17     |  47          17     |  47          13     |  47
+  26     |  44          18     |  44          18     |  44          14     |  44
+  27-31  |  41          19-23  |  41          19     |  41          15     |  41
+  32     |  38          24     |  38          20     |  38          17     |  38
+  33     |  35          25     |  35          21     |  35          18     |  35
+  34     |  32          26     |  32          22     |  32          19     |  32
+  35-39  |  29          27-31  |  29          23     |  29          20     |  29
+  40     |  27          32     |  27          24     |  27          21-24  |  27
+  41     |  25          33     |  25          25-29  |  25          25     |  25
+  42     |  23          34     |  23          30     |  23          26     |  23
+  43-47  |  21          35-39  |  21          31     |  21          27     |  21
+  48     |  19          40     |  19          32     |  19          28     |  19
+  49     |  17          41     |  17          33     |  17          29     |  17
+  50     |  15          42     |  15          34     |  15          30     |  15
+  51-55  |  14          43     |  14          35     |  14          31     |  14
+  56     |  13          44     |  13          36     |  13          32     |  13
+  57     |  12          45     |  12          37     |  12          33     |  12
+  58     |  11          46     |  11          38     |  11          34     |  11
+  59-63  |  10          47     |  10          39     |  10          35     |  10
+  64     |   9          48     |   9          40     |   9          36     |   9
+  65     |   8          49     |   8          41-45  |   8          37     |   8
+  66     |   7          50     |   7          46     |   7          38     |   7
+  67-71  |   6          51-55  |   6          47     |   6          39     |   6
+  72     |   5          56     |   5          48     |   5          40     |   5
+  73     |   4          57     |   4          49     |   4          41     |   4
+  74     |   3          58     |   3          50     |   3          42     |   3
+  75-79  |   2          59-63  |   2          51     |   2          43     |   2
+  80     |   1          64     |   1          52     |   1          44     |   1
+  80-... |   0          65-... |   0          53-... |   0          45-... |   0
+
+If you decipher this table you'll find that it has a similar pattern of wide vs
+narrow steps that we saw for the decay curve (in earlier posts). And that the
+attack-timing algorithm shown above can indeed fully explain it.
+
+The different positions of the plateaus we talked about in the previous
+subsection can be explained by this algorithm: it's because the global counter
+has a different value when attack starts. It can also explain why the first
+variant of the 11:0 measurement (in section 2.4) occurred more frequently than
+the other ones.
+
+
+
+2.6) Attack envelope for faster rates
+
+With the information in the sections above we can perfectly explain attack
+rates 1:0 to 11:3. However that explanation breaks down for faster rates.
+
+But let's first measure how the hardware actually behaves for rates 12:0 to
+14:3:
+
+ sample|| 12:0  | 12:1  | 12:2  | 12:3  || 13:0  |13:1 |13:2 |13:3 ||14:0 |14:1 |14:2 |14:3
+ ------++-------+-------+-------+-------++-------+-----+-----+-----++-----+-----+-----+-----
+    0  ||112-127|103-111|112-127|103-111||103-111|91-95|91-95|91-95||91-95|91-95|91-95|63
+    1  ||103-111| 96-102|103-111| 96-102|| 96-102|80-83|80-83|71-72||71-72|71-72|71-72|31
+    2  ||103-111| 87-90 |103-111| 84-86 || 84-86 |71-72|71-72|53   ||53   |53   |35   |15
+    3  || 96-102| 84-86 | 87-90 | 73-74 || 73-74 |62   |62   |39   ||39   |39   |17   |7
+    4  || 87-90 | 78-79 | 78-79 | 63    || 63    |54   |54   |29   ||29   |29   | 8   |3
+    5  || 84-86 | 73-74 | 68    | 55    || 55    |47   |40   |21   ||21   |21   | 3   |1
+    6  || 78-79 | 68    | 59    | 48    || 48    |41   |29   |15   ||15   |15   | 2   |0
+    7  || 73-74 | 63    | 55    | 44    || 41    |35   |21   |13   ||11   |11   | 1
+    8  || 68    | 59    | 51    | 41    || 35    |30   |15   |11   || 8   | 8   | 0
+    9  || 63    | 55    | 47    | 38    || 30    |26   |13   | 9   || 5   | 5
+   10  || 59    | 51    | 44    | 35    || 26    |22   |11   | 7   || 3   | 3
+   11  || 55    | 47    | 38    | 30    || 22    |19   | 9   | 5   || 2   | 1
+   12  || 51    | 44    | 33    | 26    || 19    |16   | 7   | 3   || 1   | 0
+   13  || 47    | 41    | 28    | 22    || 16    |11   | 5   | 2   || 0
+   14  || 44    | 35    | 24    | 19    || 13    | 8   | 3   | 1
+   15  || 41    | 30    | 22    | 16    || 11    | 5   | 2   | 0
+   16  || 38    | 26    | 20    | 13    ||  9    | 3   | 1
+   17  || 35    | 22    | 18    | 11    ||  7    | 2   | 0
+   18  || 32    | 20    | 16    |  9    ||  6    | 1
+   19  || 29    | 18    | 13    |  7    ||  5    | 0
+   20  || 27    | 16    | 11    |  6    ||  4
+   21  || 25    | 14    |  9    |  5    ||  3
+   22  || 23    | 13    |  7    |  4    ||  2
+   23  || 21    | 12    |  6    |  3    ||  1
+   24  || 19    | 11    |  5    |  2    ||  0
+   25  || 17    | 10    |  4    |  1
+   26  || 15    |  9    |  3    |  0
+   27  || 14    |  8    |  2
+   28  || 13    |  7    |  1
+   29  || 12    |  6    |  0
+   30  || 11    |  5
+   31  || 10    |  4
+   32  ||  9    |  3
+   33  ||  8    |  2
+   34  ||  7    |  1
+   35  ||  6    |  0
+   36  ||  5
+   37  ||  4
+   38  ||  3
+   39  ||  2
+   40  ||  1
+   41  ||  0
+ Note: Measuring the same rate multiple times, results in slight variations on
+       these results. (This is the same as for the slower rates).
+
+Observations:
+ - The envelope level changes every sample. IOW there are no plateaus anymore.
+ - In column 12:0 we see the familiar sequence generated by formula 'f4'.
+ - But the other columns cannot be explained by the same formula.
+
+But luckily it isn't too difficult to figure out a new explanation. First we
+need 3 extra formulas:
+
+   f4(x) := x - (x >> 4) - 1
+   f3(x) := x - (x >> 3) - 1
+   f2(x) := x - (x >> 2) - 1
+   f1(x) := x - (x >> 1) - 1
+  (And this explains why we gave our original formula the name 'f4').
+
+I'll first give the solution and explain it below. The following table has the
+same structure as the one above. But now the uncertainty intervals are resolved
+and each value is annotated with a formula 'f1-f4'.
+
+ sample|| 12:0 | 12:1 | 12:2 | 12:3 || 13:0 | 13:1 | 13:2 | 13:3 || 14:0 | 14:1 | 14:2 | 14:3
+ ------++------+------+------+------++------+------+------+------++------+------+------+------
+   -1  ||127,f4|127,f3|127,f4|127,f3||127,f3|127,f2|127,f2|127,f2||127,f2|127,f2|127,f2|127,f1
+    0  ||119,f4|111,f3|119,f4|111,f3||111,f3| 95,f3| 95,f3| 95,f2|| 95,f2| 95,f2| 95,f2| 63,f1
+    1  ||111,f4| 97,f4|111,f4| 97,f3|| 97,f3| 83,f3| 83,f3| 71,f2|| 71,f2| 71,f2| 71,f1| 31,f1
+    2  ||104,f4| 90,f4|104,f3| 84,f3|| 84,f3| 73,f3| 72,f3| 53,f2|| 53,f2| 53,f2| 35,f1| 15,f1
+    3  || 97,f4| 84,f4| 90,f3| 73,f3|| 73,f3| 62,f3| 62,f3| 39,f2|| 39,f2| 39,f2| 17,f1|  7,f1
+    4  || 90,f4| 78,f4| 78,f3| 63,f3|| 63,f3| 54,f3| 54,f2| 29,f2|| 29,f2| 29,f2|  8,f1|  3,f1
+    5  || 84,f4| 73,f4| 68,f3| 55,f3|| 55,f3| 47,f3| 40,f2| 21,f2|| 21,f2| 21,f2|  3,f2|  1,f1
+    6  || 78,f4| 68,f4| 59,f4| 48,f4|| 48,f3| 41,f3| 29,f2| 15,f3|| 15,f2| 15,f2|  2,f2|  0
+    7  || 73,f4| 63,f4| 55,f4| 44,f4|| 41,f3| 35,f3| 21,f2| 13,f3|| 11,f2| 11,f2|  1,f2
+    8  || 68,f4| 59,f4| 51,f4| 41,f4|| 35,f3| 30,f3| 15,f3| 11,f3||  8,f2|  8,f2|  0
+    9  || 63,f4| 55,f4| 47,f4| 38,f4|| 30,f3| 26,f3| 13,f3|  9,f3||  5,f2|  5,f2
+   10  || 59,f4| 51,f4| 44,f3| 35,f3|| 26,f3| 22,f3| 11,f3|  7,f2||  3,f2|  3,f1
+   11  || 55,f4| 47,f4| 38,f3| 30,f3|| 22,f3| 19,f3|  9,f3|  5,f2||  2,f2|  1,f
+   12  || 51,f4| 44,f4| 33,f3| 26,f3|| 19,f3| 16,f2|  7,f2|  3,f2||  1,f2|  0
+   13  || 47,f4| 41,f3| 28,f3| 22,f3|| 16,f3| 11,f2|  5,f2|  2,f2||  0
+   14  || 44,f4| 35,f3| 24,f4| 19,f3|| 13,f3|  8,f2|  3,f2|  1,f2
+   15  || 41,f4| 30,f3| 22,f4| 16,f3|| 11,f3|  5,f2|  2,f2|  0
+   16  || 38,f4| 26,f3| 20,f4| 13,f3||  9,f3|  3,f3|  1,f3
+   17  || 35,f4| 22,f4| 18,f4| 11,f3||  7,f3|  2,f3|  0
+   18  || 32,f4| 20,f4| 16,f3|  9,f3||  6,f3|  1,f3
+   19  || 29,f4| 18,f4| 13,f3|  7,f3||  5,f3|  0
+   20  || 27,f4| 16,f4| 11,f3|  6,f3||  4,f3
+   21  || 25,f4| 14,f4|  9,f3|  5,f3||  3,f3
+   22  || 23,f4| 13,f4|  7,f4|  4,f4||  2,f3
+   23  || 21,f4| 12,f4|  6,f4|  3,f4||  1,f3
+   24  || 19,f4| 11,f4|  5,f4|  2,f4||  0
+   25  || 17,f4| 10,f4|  4,f4|  1,f4
+   26  || 15,f4|  9,f4|  3,f3|  0
+   27  || 14,f4|  8,f4|  2,f3
+   28  || 13,f4|  7,f4|  1,f3
+   29  || 12,f4|  6,f3|  0
+   30  || 11,f4|  5,f3
+   31  || 10,f4|  4,f3
+   32  ||  9,f4|  3,f3
+   33  ||  8,f4|  2,f4
+   34  ||  7,f4|  1,f4
+   35  ||  6,f4|  0
+   36  ||  5,f4
+   37  ||  4,f4
+   38  ||  3,f4
+   39  ||  2,f4
+   40  ||  1,f4
+   41  ||  0
+
+I added one extra row to the table (sample=-1) because I assumed that the
+initial envelope level starts at 127. We also got this start value for the
+slower rates, so I think it's a reasonable assumption. Next, for each cell, I
+annotated the formula which transforms the envelope level of this cell to the
+level in the cell below it. So for example take sample=5 and rate=13:3, the
+envelope level in that cell is 21. If we apply formula 'f2' on it we obtain 15,
+and that's indeed the value in the cell below. To go one cell further down we
+need formula 'f3' to get to 13. Using this technique also allowed to resolve
+all uncertainty intervals.
+
+Notice that:
+ - Columns 12:0, 13:0 and 14:0 only apply a single formula.
+ - All other columns use 2 alternating formulas:
+   * columns 12:1 - 12:3: f3 and f4
+   * columns 13:1 - 13:3: f2 and f3
+   * columns 14:1 - 14:3: f1 and f2
+ - The pattern for the alternating formulas is:
+   * columns <n>:1   4x formula f<m> followed by 12x formula f<m+1>
+   * columns <n>:2   4x formula f<m> followed by  4x formula f<m+1>
+   * columns <n>:3  12x formula f<m> followed by  4x formula f<m+1>
+
+This pattern of 4-12, 4-4, 12-4 is the same as how the fast decay rates behave.
+Let's try to put this in a model.
+
+
+
+2.7) Model the fast attack rates
+
+Attack rates 12:0 and faster change envelope level every sample. So the
+sub-problem we had to solve for the slow rates, deciding when to change the
+level, is trivial here.
+
+The remaining problem is to decide which formula to apply. I believe the
+following model can fully reproduce the observed behavior. It's possible there
+are simpler models that can also explain this behavior, but I tried to stay
+close to the model we already built for the slow attack rates.
+
+ - Set m = 16 - (rate / 4)
+       c = (global_counter >> 1) & 6
+       eg_select = rate & 3
+ - From the table
+       0,1,0,1,0,1,0,1      (odd columns are not strictly needed, but now it's
+       0,1,0,1,1,1,0,1       the same table as above)
+       0,1,1,1,0,1,1,1
+       0,1,1,1,1,1,1,1
+   Select the element at row 'eg_select' and column 'c'. If that element is
+   '1', subtract 1 from 'm'.
+ - Apply formula f<m> to the current envelope level.
+
+
+
+2.8) Attack rate 15
+
+So far we've discussed the 'slow' (1:0 - 11:3) and the 'fast' (12:0 - 14:3)
+attack rates. But what about the 'fastest' attack rates 15:0 - 15:3. According
+to the YM2413 data sheet these rates are instantaneous. That is the envelope
+goes from min to max in a single step.
+
+However when I tried to measure this I in my experiment I saw something
+strange. Quick recap, in the experiment:
+ - I select a relatively low frequency, with initial attack-rate=0
+ - After some time, when phase has reached 90 degrees, I switch to the
+   to-be-measured attack rate.
+This works fine for rates 1-14, but for rate=15 to signal remains at amplitude
+zero. Obviously when using attack=15 in the 'normal' way it works fine. Just
+not when switching to it during an in-progress attack.
+
+My hypothesis is that attack=15 is only checked at the end of the damp phase
+(so right before the attack phase starts). If attack rate is indeed equal to
+15, we set the envelope level to zero and immediately go to the decay phase (so
+skip attack phase). But during the attack phase itself rate=15 does not work,
+(and normally this also cannot occur).
+
+To verify this hypothesis I ran two small experiments:
+
+ * toggle attack 15:
+   During the attack phase I rapidly switch between different attack rates. I
+   verified that indeed whenever attack rate 0 or 15 is active the attack curve
+   is paused. Switching to another rate continues the attack. Switching back to
+   0 or 15 pauses it again.
+
+ * attack=15 at start is indeed instantaneous
+   To verify this I selected a frequency of (3579545/72)/4 = 12329Hz. This
+   makes each sine period exactly 4 samples long. So after 1 sample we have a
+   phase of 90 degrees, thus maximal amplitude. I verified that the very first
+   sample after attack indeed already has maximum amplitude. And this means
+   that the envelope has already reached level 0 on the first sample.
+
+
+
+2.9) Attack start value 124 vs 127
+
+One thing that's still bothering me is that in these set of experiments we
+always observed the sequence:
+
+  [127 119 111 104 97 90 84 78 73 68 63 59 55 51 47 44
+    41  38  35  32 29 27 25 23 21 19 17 15 14 13 12 11
+    10   9   8   7  6  5  4  3  2  1  0]
+
+While in earlier measurements the sequence was:
+
+  [124 116 108 101 94 88 82 76 71 66 61 57 53 49 45 42
+    39  36  33  30 28 26 24 22 20 18 16 14 13 12 11 10
+     9   8   7   6  5  4  3  2  1]
+
+Actually in the old experiments we only observed the plateaus which
+respectively correspond to these levels:
+
+  [127, 97, 73, 55, 41, 29, 21, 14, 10, 6, 2, 0]
+  [124, 94, 71, 53, 39, 28, 20, 13,  9, 5, 1, 0]
+
+So why is the start value sometimes 124 and sometimes 127? After some more
+investigation I figured it out:
+
+In the experiments in this post I used the settings:
+  mod={AM=0 PM=0 EG=0 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=00 SL=00 RR=15}
+  car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=00 DR=00 SL=00 RR=15}
+combined with:
+ - set key=off  -> this triggers the release phase
+ - wait a while -> release has time to 'finish'
+ - set key=on   -> actual start of the experiment
+This results in start value 127.
+
+But if I change the experiment to:
+  mod={AM=0 PM=0 EG=0 KR=0 ML=00 KL=0 TL=63 WF=0 FB=0 AR=15 DR=00 SL=00 RR=15}
+  car={AM=0 PM=0 EG=1 KR=0 ML=00 KL=0       WF=0      AR=00 DR=00 SL=00 RR=00}
+  (I (only) changed car.RR from 15 to 00)
+ - set key=off  -> triggers release phase, but does nothing (because car.RR=00)
+ - wait a while -> envelope remains unchanged
+ - set key=on   -> this triggers the damp phase
+This results in start value 124.
+
+
+So apparently the release phase changes the envelope level all the way to 127,
+while the damp phase only goes down to 124.
+
+To test this hypothesis I ran some variations of this last experiment where I
+varied car.RR and the time between key-off and key-on:
+ - Each time when release can 'finish' (thus fast release rate and/or enough
+   time between key-off/on) attack starts from level 127.
+ - Each time there is a damp phase (release didn't finish: slow release rate
+   and/or not enough time between key-off/on) attack starts from 124.
+
+The fact that release does go down to 127 does falsify an hypothesis I made in
+an earlier post. There I assumed that envelope only goes down to 124 because
+that allows for a cheaper hardware implementation: no need for clipping logic,
+just a 5 bit and-port. It's still the case that envelope levels 124 and higher
+all result in a constant-zero output signal. Although to be really sure I
+should still test whether levels 125 and 126 can ever be observed as start
+values (e.g. by precisely timing the start of the attack). But that's something
+for a later post.
+
+
+
+2.10) Afterthought
+
+I always found the YM2413 attack curve very rough. It goes from min to max
+amplitude in only 11 steps. In this post we discovered there are actually 4x as
+many steps, but these extra steps are "well hidden".
+
+I can't think of any good reason for this behavior. With only small changes in
+the model the steps could be spread out more evenly, resulting in a much
+smoother attack curve. So I wonder if this is the result of an implementation
+bug in the YM2413?
+
+Anyway, it is what it is, and to accurately emulate the YM2413 we have to
+replicate this rough attack curve.
+
+
+
+
+
+3) Re-measure fast decay rates
+
+In an earlier post we already looked at the decay rates in detail. I remember
+the fast decay rates were difficult to measure back then. In this post I found
+a better way to measure fast rates. So let's use it to re-measure the decay
+rates.
+
+Another motivation to re-measure is that the results for fast decay rates were
+a bit strange. And I want to double check that the YM2413 is really behaving
+like that. OTOH the results we got above for fast attack are also strange and
+strange in much the same way. So in a way that's already some confirmation of
+the old results for decay.
+
+Here are the new results:
+
+  11-0:  8 8 8 8
+  11-1:  8 8 8 4 4
+  11-2:  8 4 4 8 4 4
+  11-3:  8 4 4 4 4 4 4
+
+  12-0:  4 4 4 4
+  12-1:  4 4 4 2 2
+  12-2:  4 2 2 4 2 2
+  12-3:  4 2 2 2 2 2 2
+
+  13-0:  2 2 2 2 2 2 2 2
+  13-1:  2 2 2 2 2 2 1 1 1 1
+  13-2:  2 2 1 1 1 1 2 2 1 1 1 1
+  13-3:  2 2 1 1 1 1 1 1 1 1 1 1 1 1
+
+  14-0:  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+  14-1:  0.5 0.5 0.5 0.5 1 1 1 1 1 1 1 1 1 1 1 1
+  14-2:  0.5 0.5 0.5 0.5 1 1 1 1 0.5 0.5 0.5 0.5 1 1 1 1
+  14-3:  0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 1 1 1 1
+
+  15-0:  0.5
+  15-1:  0.5
+  15-2:  0.5
+  15-3:  0.5
+
+The meaning of the values after the rate are the number of samples the envelope
+level remains constant before it is increased by one. Or if the value is 0.5 it
+means the level is increased by two.
+
+This is exactly the same result as before.
+
+
+
+
+
+4) Updated C++ model
+
+Finally I updated the C++ model with these recent findings. Now also the attack
+curve should be correct.
+
+   [ see model5.cc ]
+
+Now the model doesn't need a table anymore for the attack curev. And because
+this was the last big table that was used from the table.hh header, I moved the
+few (small) remaining tables from the header to the c file and then eliminated
+that header.
+
+Same disclaimer as above: I believe this model is correct, but it needs more
+verification to be sure.
+
+In the next weeks/months I hope to work on reverse-engineering the content of
+the YM2413 instrument ROM. Maybe that's also a good opportunity to verify the
+C++ model.
+
+After that the only(?) remaining step is investigating the rhythm sounds.

@@ -3,15 +3,14 @@ engineering. The last several months I was trying to figure out the details of
 the envelope attack curve. Though mostly without success, so there wasn't much
 to report in the first place.
 
-The month I've been helping Eugeny Brychkov to add MSX-MUSIC support in GR8NET.
-Possibly because of the discussions with Eugeny I looked at things from a
-different perspective and got an idea for a new experiment that led to the
+Last month I've been helping Eugeny Brychkov to add MSX-MUSIC support in
+GR8NET. Possibly because of the discussions with Eugeny I looked at things from
+a different perspective and got an idea for a new experiment that led to the
 breakthrough I've been hoping for. More on this in the second half of this
 post.
 
-In the first part of this post I'll continue where the last post left off. I'll
-present a C++ model of the YM2413 that includes all the stuff we've found out
-so far.
+In the first part I'll continue where the last post left off. I'll present a
+C++ model of the YM2413 that includes all the stuff we've found out so far.
 
 
 
@@ -63,7 +62,7 @@ with the information from these posts in mind).
 
   This step adds phase calculations, these are:
    - phase step size (controlled by channel frequency)
-   - (per operator) frequency modulation (is actually phase modulation)
+   - (per operator) frequency modulation
 
 
 * step 4    [ see model4.cc ]
@@ -176,7 +175,7 @@ previous experiment. Around x=1600 we set key=off and the signal drops to zero
 but the signal remains zero because attack=0. Around x=6700 we set attack to a
 non-zero value and the amplitude rapidly rises to maximum. It's important to
 choose the delay between key=on and attack=non-zero precisely so that the phase
-reaches 90 degrees (sine has maximum amplitude).
+reaches exactly 90 degrees (sine has maximum amplitude).
 
 In the graph above the attack curve was a vertical line. But if we zoom-in the
 attack curve looks as follows:
@@ -198,7 +197,7 @@ levels we already obtained from the old experiment:
 
    {112-127}, {96-102}, {73-74}, 55, 41, 29, 21, 14, 10, 6, 2, 0
 
-BUT if we zoom in closer we see something like this:
+BUT if we zoom in closer we see something unexpected:
 
    [ image: attack-curve-zoomed.png ]
 
@@ -221,10 +220,10 @@ of the steps and the envelope levels that each step visits.
 2.3) Envelope levels
 
 So let's initially ignore the timing of the attack curve. In this subsection we
-will only look at the amplitude of the signal. As before we can translate the
-measured amplitude into envelope levels, and that gives the following sequence
-(remember for the first few values we can't map the amplitude to a unique
-envelope level, so there's an uncertainty interval):
+will only look at how the amplitude of the signal evolves. As before we can
+translate the measured amplitude into envelope levels, and that gives the
+following sequence (remember for the first few values we can't map the
+amplitude to a unique envelope level, so there's an uncertainty interval):
 
    {112-127} {103-111} {103-111} {96-102}
     {87-90}   {84-86}   {78-79}  {73-74}
@@ -249,7 +248,7 @@ which there is no uncertainty) match exactly with:
     f4(x) := x - (x >> 4) - 1
 
 For reasons that will become clear later, we'll call this "formula-4" or just
-'f4'. So take the current envelope value, divide that by 16 and round down.
+'f4'. So take the current envelope value, divide that by 16 (and round down).
 Subtract this from the current value and then subtract one more.
 
 We can also apply this formula in reverse to try to determine a more precise
@@ -403,11 +402,11 @@ multiple times.
     74     |   224   |   3           78     |   224   |   3           74-78  |   224   |   3
     75-79  |   234   |   2           79     |   234   |   2           79     |   234   |   2
     80     |   244   |   1           80-84  |   244   |   1           80     |   244   |   1
-    80-... |   255   |   0           85-... |   255   |   0           81-... |   255   |   0
+    81-... |   255   |   0           85-... |   255   |   0           81-... |   255   |   0
 
 Again we see the same sequence of envelope levels. We also see 3 single steps
 followed by a plateau (only a short plateau of 5 samples for this relatively
-high rate).
+high attack rate).
 
 And indeed the position of the plateaus is different in the 3 tables. In the
 1st table the plateau starts on sample 3 while in the 2nd and 3rd table it's
@@ -734,7 +733,7 @@ To verify this hypothesis I ran two small experiments:
 
 
 
-2.9) Attack start value 124 vs 127
+2.9) Start value 124 vs 127
 
 One thing that's still bothering me is that in these set of experiments we
 always observed the sequence:
@@ -778,7 +777,7 @@ This results in start value 124.
 
 
 So apparently the release phase changes the envelope level all the way to 127,
-while the damp phase only goes down to 124.
+while the damp phase only goes up to 124.
 
 To test this hypothesis I ran some variations of this last experiment where I
 varied car.RR and the time between key-off and key-on:
@@ -790,7 +789,7 @@ varied car.RR and the time between key-off and key-on:
 The fact that release does go down to 127 does falsify an hypothesis I made in
 an earlier post. There I assumed that envelope only goes down to 124 because
 that allows for a cheaper hardware implementation: no need for clipping logic,
-just a 5 bit and-port. It's still the case that envelope levels 124 and higher
+just a 5 bit AND-port. It's still the case that envelope levels 124 and higher
 all result in a constant-zero output signal. Although to be really sure I
 should still test whether levels 125 and 126 can ever be observed as start
 values (e.g. by precisely timing the start of the attack). But that's something
@@ -873,7 +872,7 @@ curve should be correct.
 
    [ see model5.cc ]
 
-Now the model doesn't need a table anymore for the attack curev. And because
+Now the model doesn't need a table anymore for the attack curve. And because
 this was the last big table that was used from the table.hh header, I moved the
 few (small) remaining tables from the header to the c file and then eliminated
 that header.

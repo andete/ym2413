@@ -1,0 +1,241 @@
+It's again been over a year since my last progress report. I've mostly been
+working on figuring out the content of the YM2413 instrument ROM. For most
+instruments I've found settings that are close (sometimes very close) to the
+built-in instruments, but never 100% identical. I suspect there are still some
+details wrong in the model that I'm using. I will (slowly) continue working on
+this.
+
+But this slow progress is sometimes discouraging. So for some more variety I
+started to look at the YM2413 rhythm sounds. This is still very early work, but
+I already found something interesting. (Spoiler: strictly speaking it's nothing
+new, software YM2413 emulators already got this right, but it's nice to have it
+confirmed anyway).
+
+
+
+1) Rhythm sound measurements.
+
+So far all my measurements on the real YM2413 captured (only) the output of
+channel 0, outputted on the 'MO' analog output pin. But the rhythm sounds are
+outputted on various other channel numbers (thus at different relative moments
+in time) and on the 'RO' analog output pin.
+
+To be able to measure rhythm sounds I had to make (small) adjustments to the
+embedded software on the capturing board. Short summary: before the board
+itself located channel 0 (in time), only sampled that channel and send it back
+(over USB) to the host. Now I added a mode where the board samples 72x faster,
+thus capturing all channel information (both MO and RO pins). And then the host
+software must post-process this data to isolate the channel(s) it's interested
+in.
+
+Anyway, I was making some initial captures of the 5 rhythm sounds. And by
+mistake I captured the 'snare drum' sound with a frequency setting of 0x0
+instead of the recommended value of 0x550 (I forgot to update my program to
+write the frequency settings to registers 0x17 and 0x27 instead of registers
+0x16 and 0x26). This gave the following result:
+
+  [image: sd-freq0.png]
+
+Notice that the envelope is visible, but all samples have the same sign. If we
+zoom in on the tail, where the envelope is fairly flat, we see this:
+
+  [image: noise.png]
+
+From what we've reverse-engineered so far this is an unexpected result: if the
+frequency is zero, the phase should remain constant. But in this result the
+phase is clearly toggling between two values.
+
+
+
+2) Noise generator.
+
+Compared to the melodic channels, the rhythm channels use one extra component
+for sound generation, namely a random noise generator. Might the above signal
+be the output of the noise generator?
+
+Looking more closely at (120) consecutive samples in this signal gives the
+following. I mapped sample value 255 to '0' and all other values to '1':
+
+          1, 1, 0, 1, 0, 1, 0, 0, 1, 0,
+          0, 1, 1, 1, 0, 1, 1, 0, 0, 1,
+          0, 0, 1, 1, 0, 1, 0, 1, 1, 1,
+          0, 1, 0, 1, 1, 1, 0, 0, 0, 0,
+          1, 0, 1, 1, 0, 1, 0, 0, 0, 1,
+          1, 0, 0, 1, 1, 1, 0, 0, 1, 0,
+          0, 1, 1, 0, 1, 0, 0, 1, 0, 1,
+          1, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+          1, 0, 0, 1, 0, 1, 0, 0, 0, 1,
+          0, 1, 1, 1, 0, 0, 0, 1, 1, 1,
+          0, 0, 0, 1, 1, 0, 1, 1, 1, 1,
+          1, 0, 1, 0, 0, 1, 0, 0, 0, 1,
+
+This looks pretty random to me. A very common choice for a random generator is
+a Linear Feedback Shift Register (LFSR). It's cheap to implement in hardware
+and it has various nice mathematical properties. It's also used is several
+other sound chips from the same time period (e.g. AY8910 and SN76489). So it's
+likely that the YM2413 (and other chips in the Yamaha family) use it as well.
+
+But how can we know for sure? The Berlekamp-Massey algorithm can help us here.
+For a given sequence of 0's and 1's, the BM-algorithm constructs the cheapest
+LFSR that fully reproduces that sequence.
+
+    [url: https://en.wikipedia.org/wiki/Berlekamp%E2%80%93Massey_algorithm]
+
+If I feed the above sequence of 120 bits into the BM-algorithm I get the
+following polynomial as result:
+
+    x^23 + x^9 + x^8 + x + 1
+
+I'll explain what this means in the next section. If you're interested, you can
+check my implementation of BM plus some more analysis code here:
+
+    [code: lfsr.cc]
+
+If I sample the noise signal at other time offsets and apply BM, I each time
+get the same result. Or if I take only the 60 first samples of the above
+sequence, BM still gives the same result. Moreover the resulting LFSR can then
+correctly predict the continuation (the last 60 samples) of that sequence.
+
+I repeated this experiment on several different captures and several different
+sample sequences, and I always get the same result. Of course given that the
+input sequence is long enough (usually 30-40 samples is sufficient). This is a
+strong indication that the YM2413 indeed uses a LFSR for it's noise generator,
+and specifically the LFSR with this polynomial.
+
+
+
+3) Linear Feedback Shift Register (LFSR)
+
+But what is a LFSR exactly? You can find many details and references on
+wikipedia. But below I'll also try to explain in an easier (less precise) way.
+
+    [url: https://en.wikipedia.org/wiki/Linear-feedback_shift_register]
+
+Very brief the idea is the following:
+ - Remember the last N output bits.
+ - Pick a (fixed) selection from those bits (e.g. always pick the 5th- and
+   6th-to-last output bit).
+ - XOR the selected bits. The result is the new (pseudo-random) output bit.
+
+This is illustrated in the following image:
+
+    [image: lfsr.png]
+
+For now only look at the 'Fibonacci-configuration'. You see a large rectangle
+that contains 23 smaller cells. Each of these cells stores one bit. These
+contain the last 23 output bits of the LFSR. Some of these outputs (bits 1, 8,
+9 and 23 in this example) are XOR'ed together and the result is feed back to
+cell 1. This is the newly generated random bit. When a new output bit is
+generated, all existing bits shift one position to the right. So the last bit
+becomes the 2nd-to last and so on.
+
+Notice how the 'tap-positions' (1, 8, 9, 23) correspond to the exponents in the
+polynomial that describes this LFSR (x^23 + x^9 + x^8 + x^1 + 1). There's a
+mathematical reason why polynomials are used to describe LFSRs, but I won't go
+into that. The '+ 1' at the end of the polynomial does not correspond to a
+tap-position, it makes sense in the mathematical description (it's related to
+the input), but we'll also ignore that here.
+
+This was the 'Fibonacci-configuration' of a LFSR. This description is easy to
+understand, but it's usually not how LFSRs are actually implemented. In
+practice, both in hardware and in software, often the 'Galois-configuration' is
+used instead. This configuration is shown in the lower part of the image.
+
+Both configurations have the same number of shift register bits and the same
+number of XOR operations. Only the arrangement differs. (Also note that the
+numbering is swapped left-to-right). In the Galois configuration the XOR
+operations are located 'in between' the shift register bits. Thus the shifted
+bits get modified while they are 'in-flight'. It can mathematically be shown
+that both configurations produce the exact same output sequence (in cell '1').
+But the full internal state (including the values of the other bits in the
+shift register) is NOT the same for both.
+
+Some mathematical properties:
+- When all bits in the shift register have value '0', the newly calculated
+  value will also be '0', thus the LFSR remains stuck in this state forever.
+- This specific LFSR (23,9,8,1) has 'maximal length'. This means that, when
+  iterating this LFSR, every state (except for the all-0 state) is visited
+  exactly once before we return to the start-state. In this case we have 23
+  bits of state, so the random sequence will repeat itself after 2^23-1 =
+  8388607 steps.
+
+Applied to the YM2413 this means that:
+- The hardware must make sure that after a reset the shift register does not
+  contain all '0' bits. Any other state is fine. So e.g. it's fine to set one
+  specific bit to '1' and leave all others uninitialized. Or initializing all
+  bits to '1' is fine as well of course. I don't know how the real YM2413
+  initializes the LFSR state.
+- The random sequence repeats itself after about 8.3 million steps. Given the
+  YM2413 sample rate, that's over 160 seconds. That's more than sufficient.
+
+I mentioned that 'Galois' is more often used than 'Fibonacci'. Why is that?
+- Mathematically both are equivalent. So purely from a mathematical point of
+  view neither is better than the other.
+- In hardware there's a difference in propagation delay:
+  - Fibonacci: to calculate the new output bit the signal has to propagate
+    through 3 XOR ports.
+  - Galois: the calculation for each bit passes through at most 1 XOR port.
+  So in theory a Galois LFSR circuit can be clocked higher compared to the
+  corresponding Fibonacci circuit. (Though I don't believe the LFSR is a
+  bottleneck in the full YM2413 circuit).
+- In software there's a more substantial difference. The Galois variant can
+  exploit word-level parallelism and therefor typically requires less CPU
+  operations compared to the Fibonacci variant.
+
+    // Input: LFSR state.
+    // Output: updated LFSR state, random output is located in bit 0.
+
+    unsigned lfsr_step_fibonacci(unsigned state) {
+        bool output = ((state >> 22) ^ (state >> 8) ^ (state >> 7) ^ state) & 1;
+        return (state << 1) | output;
+    }
+
+    unsigned lfsr_step_galois(unsigned state) {
+        bool output = state & 1;
+        state >>= 1;
+        if (output) state ^= 0x400181
+        return state;
+    }
+
+
+
+4) Comparison to existing hardware/software.
+
+Let's check how the noise function is implemented in the existing YM2413
+software emulators. In the openMSX src/sound/YM2413Burczynski.cc code you can
+find this code snippet:
+
+    if (noise_rng & 1) noise_rng ^= 0x800302;
+    noise_rng >>= 1;
+
+That's equivalent to the 'lfsr_step_galois()' function above (difference is
+whether the XOR operation is applied before or after the shift operation). So
+the software emulation was already using the correct LFSR. It's always nice to
+confirm such things.
+
+
+Can we also find this LFSR in the YM2413 die-shot? I already speculated about
+this in an earlier article. Here's a (slightly extended) repetition of the
+YM2413 die-shot.
+
+    [image: die-shot.jpg]
+
+In the upper-right corner, near the green colored 'PG' rectangle I marked in
+white a shift-register with 14 (or 15?) bits. That's not enough for the full
+LFSR (needs 23 bits) but it might correspond to the longest chunk of 14-bits in
+the Galois-configuration of the LFSR (see above). The single bit registers
+surrounded by XOR gates are hard to see in this die shot (at least for me). And
+the remaining 7 bit shift register might be obscured by all the wiring in this
+region. Also important: placing the LFSR close to the other circuitry that
+handles phase calculations is very logical. All this gives me more confidence
+that this white colored shift register is indeed related to the noise
+generation.
+
+
+
+5) Next steps
+
+I'll probably continue with investigating the rhythm sounds. This article only
+looked at the noise generator, but we still need to figure out how exactly this
+noise is used to produce the rhythm sounds. After that I'll probably return to
+the instrument ROM. As always, help would be appreciated.

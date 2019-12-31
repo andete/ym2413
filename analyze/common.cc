@@ -1,11 +1,14 @@
 #include "common.hh"
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <cstdio>
+#include <cstring>
 #include <cassert>
 #include <memory>
 #include <deque>
@@ -87,6 +90,15 @@ void writeRegister(uint8_t reg, uint8_t val, Script& script)
 	script.push_back(0x900 | val); script.push_back(1);      // WE CS A0 
 	script.push_back(0xF00 | val); script.push_back(84 - 2); // A0
 }
+void fastWriteRegister(uint8_t reg, uint8_t val, Script& script)
+{
+	script.push_back(0xC00 | reg); script.push_back(1);      // WE
+	script.push_back(0x800 | reg); script.push_back(1);      // WE CS 
+	script.push_back(0xE00 | reg); script.push_back(12 - 2); //
+	script.push_back(0xD00 | val); script.push_back(1);      // WE A0
+	script.push_back(0x900 | val); script.push_back(1);      // WE CS A0 
+	script.push_back(0xF00 | val); script.push_back(12 - 2); // A0
+}
 void writeRegisterDelay(uint8_t reg, uint8_t val, int delay, Script& script)
 {
 	int d = std::max(1, delay - 95);
@@ -113,8 +125,8 @@ void setInstrument(const Patch& patch, Script& script)
 
 void addReset(Script& script)
 {
-	script.push_back(0x700); script.push_back(80); // IC active for at least 80 cycles
-	script.push_back(0xF00); script.push_back(1); // deactivate IC
+	script.push_back(0x700); script.push_back(80 * 10); // IC active for at least 80 cycles
+	script.push_back(0xF00); script.push_back(1 + 100); // deactivate IC
 }
 void endScript(Script& script)
 {
@@ -153,7 +165,6 @@ void printScript(const Script& script)
 
 
 int fd;
-struct pollfd fds[1];
 
 vector<uint8_t> send;
 uint8_t wait[256] = {};
@@ -182,11 +193,13 @@ const vector<uint16_t>& getCapturedData()
 
 void handleRead(uint16_t data)
 {
+	//std::cout << std::hex << data << ' ';
 	if ((data >> 8) == 0x80) {
 		uint8_t d = data & 0xFF;
-		//printf("--%d-- ", d);
+		    //std::cout << "reset: " << int(d) << '\n';
 		resetPending(d);
 	} else if (capture) {
+		    //std::cout << "data: " << int(data + 0x8000) << '\n';
 		capData.push_back(data + 0x8000);
 	}
 }
@@ -197,23 +210,20 @@ void handleRead()
 	static uint8_t half = 0; // half of a 16-bit value
 
 	//printf("I");
-	while (true) {
-		uint8_t buf[4096];
+	//while (true) {
+		uint8_t buf[256];
 		auto r = read(fd, buf, sizeof(buf));
-		if (r == -1) {
-			if (errno == EAGAIN) break;
-			assert(false);
-		}
-		//printf("%d ", int(r));
-		for (decltype(r) i = 0; i < r; ++i) {
-			if (even) {
-				half = buf[i];
-			} else {
-				handleRead(buf[i] << 8 | half);
+		if (r > 0) {
+			for (decltype(r) i = 0; i < r; ++i) {
+				if (even) {
+					half = buf[i];
+				} else {
+					handleRead(buf[i] << 8 | half);
+				}
+				even = !even;
 			}
-			even = !even;
 		}
-	}
+	//}
 }
 
 void handleWrite()
@@ -231,17 +241,31 @@ void handleWrite()
 
 void pollIO()
 {
-	fflush(stdout);
-	int p = poll(fds, 1, 100);
-	if (p == 0) {
-		//printf(".");
-		return;
-	}
-	if (fds[0].revents & POLLIN) {
-		handleRead();
-	}
-	if (fds[0].revents & POLLOUT) {
-		handleWrite();
+	//fflush(stdout);
+
+	struct pollfd fds[1];
+	fds[0].fd = fd;
+	fds[0].events = POLLIN | POLLOUT;
+
+	//std::cout << "DEBUG fds before " << fds[0].fd << ' ' << fds[0].events << ' ' << fds[0].revents << '\n';
+
+	int p = poll(fds, 1, 1000);
+	//std::cout << "DEBUG fds after " << fds[0].fd << ' ' << fds[0].events << ' ' << fds[0].revents << ' ' << p << '\n';
+	if (p < 0) {
+		perror("poll");
+	} else if (p > 0) {
+		if (fds[0].revents & POLLIN) {
+			//std::cout << "DEBUG A\n";
+			handleRead();
+			//std::cout << "DEBUG B\n";
+			//toggleLedC();
+			//echo(0);
+		}
+		if (fds[0].revents & POLLOUT) {
+			//std::cout << "DEBUG C\n";
+			handleWrite();
+			//std::cout << "DEBUG D\n";
+		}
 	}
 }
 
@@ -267,6 +291,13 @@ void startCapture()
 	capData.clear();
 }
 
+void startCapture72()
+{
+	send.push_back('D');
+	capture = true;
+	capData.clear();
+}
+
 void toggleLedA()
 {
 	send.push_back('A');
@@ -286,14 +317,109 @@ void echo(uint8_t e)
 	send.push_back(e);
 }
 
+
+int my_open(const char* dev)
+{
+	int fd = ::open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY);
+	if (fd < 0) {
+		printf("Failed to open serial device '%s' (errno: %s)\n", dev, strerror(errno));
+		exit(1);
+	}
+	if (::ioctl(fd, TIOCEXCL)) {
+		printf("Failed to lock serial device '%s' (errno: %s)\n", dev, strerror(errno));
+		exit(1);
+	}
+
+	// Check if device is a terminal device
+	if (!isatty(fd)) {
+		printf("Device '%s' is not a terminal device (errno: %s)!\n", dev, strerror(errno));
+		exit(1);
+	}
+
+	struct termios settings;
+	// Set input flags
+	settings.c_iflag = IGNBRK  // Ignore BREAKS on Input
+	                 | IGNPAR; // No Parity
+	// ICRNL: map CR to NL (otherwise a CR input on the other computer will not terminate input)
+
+	// Set output flags
+	settings.c_oflag = 0; // Raw output
+
+	// Set controlflags
+	settings.c_cflag = B115200 // bitrate
+	                 | CS8     // 8 bits per byte
+	                 | CSTOPB  // Stop bit
+	                 | CREAD   // characters may be read
+	                 | CLOCAL; // ignore modem state, local connection
+
+	// Set local flags
+	settings.c_lflag = 0; // Other option: ICANON = enable canonical input
+
+	// non-canonical mode: set device to non blocking mode:
+	// Set timer
+	settings.c_cc[VTIME] = 0; // 0 means timer is not used
+
+	// Set minimum bytes to read
+	settings.c_cc[VMIN]  = 0; // 1 means wait until at least 1 character is received; 0 means don't wait
+
+	// Now clean the modem line and activate the settings for the port
+	tcflush(fd, TCIFLUSH);
+	tcsetattr(fd, TCSANOW, &settings);
+	return fd;
+}
+
+
 void init(const char* dev)
 {
-	fd = open(dev, O_RDWR | O_NONBLOCK);
+	fd = my_open(dev);
+	//std::cout << "DEBUG fd = " << fd << '\n';
+#if 0
+	fd = open(dev, O_RDWR | /*O_NONBLOCK |*/ O_NOCTTY);
 	if (fd == -1) {
 		printf("Error opening %s\n", dev);
 		exit(1);
 	}
-	fds[0].fd = fd;
-	fds[0].events = POLLIN | POLLOUT;
-	fds[0].revents = 0;
+	if (ioctl(fd, TIOCEXCL)) {
+		printf("Failed to lock serial device '%s' (errno: %s)\n", dev, strerror(errno));
+		exit(1);
+	}
+	if (!isatty(fd)) {
+		printf("Device '%s' is not a terminal device (errno: %s)!\n", dev, strerror(errno));
+		exit(1);
+	}
+
+	struct termios settings;
+	// Set input flags
+	settings.c_iflag = IGNBRK  // Ignore BREAKS on Input
+	                 | IGNPAR; // No Parity
+	// ICRNL: map CR to NL (otherwise a CR input on the other computer will not terminate input)
+
+	// Set output flags
+	settings.c_oflag = 0; // Raw output
+
+	// Set controlflags
+	settings.c_cflag = B115200  // bitrate
+		         | CS8      // 8 bits per byte
+		         | CSTOPB   // Stop bit
+		         | CREAD    // characters may be read
+		         | CLOCAL;  // ignore modem state, local connection
+
+	// Set local flags
+	settings.c_lflag = 0; // Other option: ICANON = enable canonical input
+
+	// non-canonical mode: set device to non blocking mode:
+	// Set timer
+	settings.c_cc[VTIME] = 0; // 0 means timer is not used
+
+	// Set minimum bytes to read
+	settings.c_cc[VMIN] = 0; // 1 means wait until at least 1 character is received; 0 means don't wait
+
+	// Now clean the modem line and activate the settings for the port
+	tcflush(fd, TCIFLUSH);
+	tcsetattr(fd, TCSANOW, &settings);
+#endif
+
+	//fds[0].fd = fd;
+	//fds[0].events = POLLIN | POLLOUT;
+	//fds[0].revents = 0;
 }

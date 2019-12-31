@@ -45,6 +45,7 @@ static int usbCallback(USB_Status_TypeDef status, uint32_t /*xferred*/, uint32_t
 enum class State { S0, E0, R0, R1, R2, R3 };
 static State state = State::S0;
 static uint8_t echoData[2]  = { 0x00, 0x80 };
+static uint8_t start0Data[2]= { 0xD1, 0x80 };
 static uint8_t startData[2] = { 0xD3, 0x80 };
 static uint8_t stopData[2]  = { 0xF3, 0x80 };
 static uint8_t reg1Data[2]  = { 0xD2, 0x80 };
@@ -72,6 +73,9 @@ static void usbRx(uint8_t data)
 			led::toggle(2);
 		} else if (data == 'C') {
 			led::toggle(3);
+		} else if (data == 'D') {
+			usbcdc::write(start0Data, sizeof(startData));
+			adc0::start0(true);
 		} else if (data == 'S') {
 			usbcdc::write(startData, sizeof(startData));
 			adc0::start1(true);

@@ -239,3 +239,54 @@ I'll probably continue with investigating the rhythm sounds. This article only
 looked at the noise generator, but we still need to figure out how exactly this
 noise is used to produce the rhythm sounds. After that I'll probably return to
 the instrument ROM. As always, help would be appreciated.
+
+
+
+
+UPDATE [2020/01/02]:
+
+I was reading the Nuke.YKT emulation code
+  https://github.com/nukeykt/Nuked-OPLL/blob/master/opll.c
+and was surprised that it uses a different (simpler) LFSR. I had a short
+discussion about this with the author and he explained me the following:
+
+In this article I'm assuming that the LFSR updates at a frequency of 49716Hz
+(3.5MHz / 72). However in the actual hardware the LFSR update 18x faster: after
+every operator instead of only once after all channels.
+
+Nuke.YKT uses the formula
+    bit = (noise ^ (noise >> 14)) & 1;
+    noise = (bit << 22) | (noise >> 1);
+This corresponds to the LFSR with polynomial:
+ A) x^23 + x^9 + 1
+But if you iterate that formula 18 times you indeed get the LFSR we found in
+this article:
+ B) x^23 + x^9 + x^8 + x^1 + 1
+
+So for a _single_ channel it doesn't matter whether you use LFSR-B once or
+LFSR-A 18 times. But it does matter when _multiple_ channels use the LFSR.
+
+More specially: both the 'High Hat' (HH) and the 'Snare Drum' (SD) rhythm
+sounds use the LFSR (see "../rhythm/rhythm.md" for details). HH is calculated
+first and 3x4 cycles later SD is calculated. The predictions only match the
+measurements when:
+ - we use LFSR formula A
+ - repeat every 72 cycles:
+   * HH uses noise bit
+   * LFSR iterates 3 times
+   * SD uses noise bit
+   * LFSR iterates 15 times
+
+Optimization note:
+Naively switching to the 'real' LFSR formula for software emulation make the
+calculation also 18x slower. Fortunately there are easy ways to extract both
+the current noise-bit and the noise-bit-after-3-iterations from the same 23-bit
+LFSR status. The general schema then becomes:
+ - use LFSR formula B
+ - repeat every 72 cycles:
+   * extract current noise bit for HH
+   * extract future noise bit 3 for SD
+   * iterate LFSR only once
+Note however that there's also some interaction with test register bit 1 (see
+Nuke.YKT code).
+

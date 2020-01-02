@@ -171,10 +171,11 @@ But neither was an exact match for my measurements. After some trial and error I
 |         | phase(8)=0 | phase(8)=1 | | | | | | |         | phase(8)=0 | phase(8)=1 |
 |:-------:|:----------:|:----------:|-|-|-|-|-|-|:-------:|:----------:|:----------:|
 | noise=0 |     +0     |   -max     | | | | | | | noise=0 |    -max    |    +0      |
-| noise=1 |    +max    |    +0      | | | | | | | noise=1 |     +0     |   +max     |
+| noise=1 |    +max    |    -0      | | | | | | | noise=1 |     -0     |   +max     |
 
 Notice:
 - Emulators output 4 distinct values +max, -max, +0, -0. But I don't observe the value -0 in my measurements. (Remember +0 and -0 result in a different output on the YM2413 DAC).
+  <br/>**UPDATE:** I measured again (after re-calibration) and now I _do_ see both +0 and -0.
 - +max and -max appear diagonally from each other in the table (Burczynski got this detail right).
 
 There are two possibilities (2 columns swapped) because I can't observe the value of the phase counter (*TODO design an experiment for this ... Maybe capture SD soon after melodic->rhythm mode transition ??*).
@@ -191,7 +192,7 @@ I strongly believe this is **not** the LFSR used in the YM2413 because:
 
 #### Envelope
 
-Apart from phase (+max, +0, -max) we also have to reverse engineer the envelope. I found that the following gives a pretty good match. (Because SD is produced by 'car7', now only the odd registers are relevant, but register 3 is irrelevant).
+Apart from phase (+max, +0, -0, -max) we also have to reverse engineer the envelope. I found that the following gives a pretty good match. (Because SD is produced by 'car7', now only the odd registers are relevant, but register 3 is irrelevant).
 
 |   0  |   1  |   2  |   3  |   4  |   5  |   6  |   7  |
 |:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
@@ -354,6 +355,8 @@ So the possible outputs are: 0x000, 0x100, 0x200 and 0x300. Transformed to the t
 This matches one of the two possibilities I got, _except_ that this formula produces both +0 and -0, while I only measured +0.
 _TODO double check this_.
 
+**UPDATE:** I measured again, and my new results do show +0 and -0. So Nuke.YKT is correct.
+
 
 #### Top cymbal (TCY)
 
@@ -396,6 +399,10 @@ This results in two possible phase values: 0x80 and 0x280. We have 10 bits (1024
 
 I'm fairly confident in my measurements: I clearly see the maximum TCY amplitude going all the way to -255 which is only possible with phase = 0x300 (-> sin(270) = -1). The Nuke.YKT emulation code handles 3 chip types: YM2413, YM2413B and VRC VII, my measurements are exclusively done on a YM2413. _Could it be that the 3 chip types differ in this detail? And that the Nuke.YKT emulation overlooked this difference?_
 
+**UPDATE:** Nuke.YKT confirmed my result and fixed his code. His formula is now:
+```
+    pg_out = (rm_bit << 9) | 0x100;
+```
 
 #### High hat (HH)
 

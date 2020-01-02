@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	int num_channels = 4;
+	int num_channels = 1;
 
 	auto bins = load(argv[1]);
 	auto raw  = load(argv[2]);

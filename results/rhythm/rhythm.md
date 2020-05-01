@@ -289,7 +289,7 @@ As before, let's start with showing some [captured data](hh-L2000-100-300.png) (
 
 The phase behavior of HH is the most complex all YM2413 rhythm waveforms. But it turns out to be a combination of stuff we've already reverse engineered for the SD and TCY waveforms. So after that it wasn't too hard anymore to figure out HH. This is the formula I obtained:
 ```
-   bool pp = (b85 ^ b83) & (b77 ^ b72) & (b85 ^ b73);
+   bool pp = (c85 ^ c83) & (m77 ^ m72) & (c85 ^ m73);
    int phase = (noise & 1) ? (pp ? 0xd0 : 0x234)
 	                   : (pp ? 0x34 : 0x2d0);
 ```
@@ -419,7 +419,7 @@ I'm fairly confident in my measurements: I clearly see the maximum TCY amplitude
 ```
 I got:
 ```
-   bool pp = (b85 ^ b83) & (b77 ^ b72) & (b85 ^ b73);
+   bool pp = (c85 ^ c83) & (m77 ^ m72) & (c85 ^ m73);
    int phase = (noise & 1) ? (pp ? 0xd0 : 0x234)
                            : (pp ? 0x34 : 0x2d0);
 ```
